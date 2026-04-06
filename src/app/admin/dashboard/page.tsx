@@ -71,8 +71,6 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Header do racha */}
-      import CompartilharRacha from '@/components/admin/CompartilharRacha' //
-      ...
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-black text-white">{racha?.nome}</h1>
