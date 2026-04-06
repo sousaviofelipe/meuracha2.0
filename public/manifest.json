@@ -1,6 +1,7 @@
 {
-  "name": "RachaApp",
-  "short_name": "RachaApp",
+  "id": "/login",
+  "name": "Meu Racha",
+  "short_name": "Meu Racha",
   "description": "Gerencie seu racha com facilidade",
   "start_url": "/login",
   "display": "standalone",
@@ -12,13 +13,35 @@
       "src": "/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Meu Racha"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Meu Racha"
     }
   ]
 }

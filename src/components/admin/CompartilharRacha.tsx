@@ -17,7 +17,7 @@ export default function CompartilharRacha({ racha }: Props) {
       ? `${window.location.origin}/racha/${racha.codigo}`
       : `/racha/${racha.codigo}`;
   const mensagemWhats = encodeURIComponent(
-    `Acesse o nosso racha no RachaApp! 🔥\n\n${link}`,
+    `Acesse o nosso racha no Meu Racha! 🔥\n\n${link}`,
   );
 
   useEffect(() => {
