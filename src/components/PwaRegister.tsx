@@ -42,7 +42,7 @@ export default function PwaRegister() {
         className="w-10 h-10 rounded-xl flex-shrink-0"
       />
       <div className="flex-1">
-        <p className="text-white font-bold text-sm">Instalar RachaApp</p>
+        <p className="text-white font-bold text-sm">Instalar Meu Racha</p>
         <p className="text-gray-400 text-xs">Adicione à tela inicial</p>
       </div>
       <button
