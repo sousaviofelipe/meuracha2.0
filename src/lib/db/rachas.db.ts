@@ -64,3 +64,31 @@ export async function dbGetUltimaPartida(
     .single();
   return data;
 }
+export async function dbAtualizarRacha(
+  id: string,
+  nome: string,
+  descricao: string,
+  codigo: string,
+): Promise<Racha> {
+  const { data, error } = await getSupabase()
+    .from("rachas")
+    .update({ nome, descricao, codigo })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function dbVerificarCodigoDisponivel(
+  codigo: string,
+  rachaId: string,
+): Promise<boolean> {
+  const { data } = await getSupabase()
+    .from("rachas")
+    .select("id")
+    .eq("codigo", codigo.toUpperCase())
+    .neq("id", rachaId)
+    .single();
+  return !data;
+}

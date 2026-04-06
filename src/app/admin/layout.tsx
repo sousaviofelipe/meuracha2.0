@@ -25,6 +25,7 @@ export default function AdminLayout({
     { href: "/admin/partidas", label: "Partidas", icon: "⚽" },
     { href: "/admin/notificacoes", label: "Notificações", icon: "🔔" },
     { href: "/admin/enquetes", label: "Enquetes", icon: "📋" },
+    { href: "/admin/configuracoes", label: "Configurações", icon: "⚙️" },
   ];
 
   return (
