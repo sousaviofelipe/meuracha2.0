@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import CompartilharRacha from "@/components/admin/CompartilharRacha";
 import { getUser } from "@/lib/services/auth.service";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
