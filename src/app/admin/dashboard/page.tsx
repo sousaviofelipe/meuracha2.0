@@ -70,6 +70,8 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Header do racha */}
+      import CompartilharRacha from '@/components/admin/CompartilharRacha' //
+      ...
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-black text-white">{racha?.nome}</h1>
@@ -80,8 +82,8 @@ export default function DashboardPage() {
             </span>
           </p>
         </div>
+        {racha && <CompartilharRacha racha={racha} />}
       </div>
-
       {/* Notificação */}
       {notificacao ? (
         <Link href="/admin/notificacoes">
@@ -105,7 +107,6 @@ export default function DashboardPage() {
           </div>
         </Link>
       )}
-
       {/* Enquete */}
       {enquete ? (
         <Link href="/admin/enquetes">
@@ -150,7 +151,6 @@ export default function DashboardPage() {
           </div>
         </Link>
       )}
-
       {/* Última partida */}
       {ultimaPartida ? (
         <Link href="/admin/partidas">
@@ -188,7 +188,6 @@ export default function DashboardPage() {
           </div>
         </Link>
       )}
-
       {/* Artilheiros */}
       <Link href="/admin/estatisticas/artilheiros">
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 cursor-pointer hover:border-gray-700 transition-colors">
@@ -220,7 +219,6 @@ export default function DashboardPage() {
           )}
         </div>
       </Link>
-
       {/* Assistências */}
       <Link href="/admin/estatisticas/assistencias">
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 cursor-pointer hover:border-gray-700 transition-colors">
@@ -252,7 +250,6 @@ export default function DashboardPage() {
           )}
         </div>
       </Link>
-
       {/* Cartões */}
       <Link href="/admin/estatisticas/cartoes">
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 cursor-pointer hover:border-gray-700 transition-colors">

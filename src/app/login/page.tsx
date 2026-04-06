@@ -75,7 +75,7 @@ export default function LoginPage() {
       <div className="text-center">
         <img src="/logo.png" alt="RachaApp" className="h-30 w-auto mx-auto" />
         <p className="text-gray-400 mt-2 text-sm">
-          Gerencie seu racha com facilidade 02
+          Gerencie seu racha com facilidade
         </p>
       </div>
 
