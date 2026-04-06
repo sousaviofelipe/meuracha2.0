@@ -29,9 +29,6 @@ export default function DashboardPublicoPage() {
   const [votou, setVotou] = useState<string | null>(null);
 
   useEffect(() => {
-    const votoSalvo = localStorage.getItem(`voto_${codigo}`);
-    if (votoSalvo) setVotou(votoSalvo);
-
     async function carregar() {
       const r = await dbGetRachaPorCodigo(codigo);
       if (!r) return setNotFound(true);
@@ -45,20 +42,26 @@ export default function DashboardPublicoPage() {
       ]);
       setStats(s);
       setNotificacao(n);
-      setEnquete(e);
       setUltimaPartida(p);
+
+      // Verifica voto salvo usando o id da enquete
+      if (e?.id) {
+        const votoSalvo = localStorage.getItem(`voto_enquete_${e.id}`);
+        if (votoSalvo) setVotou(votoSalvo);
+      }
+      setEnquete(e);
       setLoading(false);
     }
     carregar();
   }, [codigo]);
 
   async function handleVotar(opcaoId: string) {
-    if (votou || votando) return;
+    if (votou || votando || !enquete) return;
     setVotando(true);
     try {
       await dbVotarPublico(opcaoId);
       setVotou(opcaoId);
-      localStorage.setItem(`voto_${codigo}`, opcaoId);
+      localStorage.setItem(`voto_enquete_${enquete.id}`, opcaoId);
       const e = await dbGetEnqueteAtivaPublico(racha!.id);
       setEnquete(e);
     } finally {
@@ -151,7 +154,9 @@ export default function DashboardPublicoPage() {
           <div className="bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-3">
               <span>📋</span>
-              <span className="text-blue-400 font-bold text-sm">Enquete</span>
+              <span className="text-blue-400 font-bold text-sm">
+                Enquete OK
+              </span>
             </div>
             <p className="text-white font-semibold mb-4">{enquete.pergunta}</p>
             <div className="flex flex-col gap-2">
@@ -206,6 +211,12 @@ export default function DashboardPublicoPage() {
                 Voto registrado ✓
               </p>
             )}
+            <Link
+              href={`/racha/${codigo}/enquetes`}
+              className="block text-center text-blue-400 text-xs mt-3 hover:underline"
+            >
+              ver todas as enquetes →
+            </Link>
           </div>
         )}
 
