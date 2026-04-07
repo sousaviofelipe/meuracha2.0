@@ -1,5 +1,6 @@
 "use client";
 
+import { Escalacao } from "@/types";
 import { getSupabase } from "@/lib/db/supabase";
 import { dbGetEscalacaoAtivaPublico } from "@/lib/db/publico.db";
 import CampoEscalacao from "@/components/CampoEscalacao";
