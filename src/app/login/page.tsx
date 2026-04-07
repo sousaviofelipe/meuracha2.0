@@ -8,7 +8,7 @@ import { dbValidarConvite, dbUsarConvite } from "@/lib/db/convites.db";
 import { getSupabase } from "@/lib/db/supabase";
 import { Racha } from "@/types";
 
-const WHATSAPP_NUMERO = "5583999999999";
+const WHATSAPP_NUMERO = "5583986177733";
 const WHATSAPP_MENSAGEM = encodeURIComponent(
   "Olá! Quero criar meu racha no RachaApp. Como faço para adquirir acesso?",
 );
@@ -191,9 +191,18 @@ export default function LoginPage() {
                   </button>
                   <button
                     onClick={() => favoritar(r)}
-                    className="text-xl transition-transform hover:scale-110"
+                    className="transition-transform hover:scale-110"
                   >
-                    {isFavorito(r.id) ? "⭐" : "☆"}
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill={isFavorito(r.id) ? "#facc15" : "none"}
+                      stroke={isFavorito(r.id) ? "#facc15" : "#9ca3af"}
+                      strokeWidth="2"
+                      className="w-6 h-6"
+                    >
+                      <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24 14.81 8.63 12 2 9.19 8.63 2 9.24 7.46 13.97 5.82 21z" />
+                    </svg>
                   </button>
                 </div>
               ))}

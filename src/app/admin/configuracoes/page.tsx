@@ -8,6 +8,7 @@ import {
   dbAtualizarRacha,
   dbVerificarCodigoDisponivel,
 } from "@/lib/db/rachas.db";
+import { dbAtualizarFinanceiro } from "@/lib/db/financeiro.db";
 import { Racha } from "@/types";
 
 export default function ConfiguracoesPage() {
@@ -15,12 +16,22 @@ export default function ConfiguracoesPage() {
   const [racha, setRacha] = useState<Racha | null>(null);
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [salvandoPix, setSalvandoPix] = useState(false);
   const [erro, setErro] = useState("");
+  const [erroPix, setErroPix] = useState("");
   const [sucesso, setSucesso] = useState(false);
+  const [sucessoPix, setSucessoPix] = useState(false);
 
+  // Racha
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
   const [codigo, setCodigo] = useState("");
+
+  // Financeiro
+  const [mensalidade, setMensalidade] = useState("");
+  const [pixChave, setPixChave] = useState("");
+  const [pixTitular, setPixTitular] = useState("");
+  const [pixBanco, setPixBanco] = useState("");
 
   useEffect(() => {
     async function carregar() {
@@ -32,28 +43,24 @@ export default function ConfiguracoesPage() {
       setNome(r.nome);
       setDescricao(r.descricao ?? "");
       setCodigo(r.codigo);
+      setMensalidade((r as any).mensalidade?.toString() ?? "");
+      setPixChave((r as any).pix_chave ?? "");
+      setPixTitular((r as any).pix_titular ?? "");
+      setPixBanco((r as any).pix_banco ?? "");
       setLoading(false);
     }
     carregar();
   }, []);
 
-  async function handleSalvar() {
+  async function handleSalvarRacha() {
     if (!nome.trim()) return setErro("Nome é obrigatório");
     if (!codigo.trim()) return setErro("Código é obrigatório");
-    if (codigo.length < 4)
-      return setErro("Código deve ter pelo menos 4 caracteres");
-    if (!/^[A-Z0-9-]+$/.test(codigo.toUpperCase()))
-      return setErro("Código só pode ter letras, números e hífen");
     if (!racha) return;
-
     setSalvando(true);
     setErro("");
     setSucesso(false);
-
     try {
       const codigoFormatado = codigo.toUpperCase().trim();
-
-      // Verifica se código já está em uso por outro racha
       if (codigoFormatado !== racha.codigo) {
         const disponivel = await dbVerificarCodigoDisponivel(
           codigoFormatado,
@@ -62,7 +69,6 @@ export default function ConfiguracoesPage() {
         if (!disponivel)
           throw new Error("Este código já está em uso por outro racha.");
       }
-
       const atualizado = await dbAtualizarRacha(
         racha.id,
         nome.trim(),
@@ -80,6 +86,28 @@ export default function ConfiguracoesPage() {
     }
   }
 
+  async function handleSalvarFinanceiro() {
+    if (!racha) return;
+    setSalvandoPix(true);
+    setErroPix("");
+    setSucessoPix(false);
+    try {
+      await dbAtualizarFinanceiro(
+        racha.id,
+        parseFloat(mensalidade) || 0,
+        pixChave.trim(),
+        pixTitular.trim(),
+        pixBanco.trim(),
+      );
+      setSucessoPix(true);
+      setTimeout(() => setSucessoPix(false), 3000);
+    } catch (err: any) {
+      setErroPix(err.message);
+    } finally {
+      setSalvandoPix(false);
+    }
+  }
+
   function handleCodigo(valor: string) {
     setCodigo(valor.toUpperCase().replace(/[^A-Z0-9-]/g, ""));
   }
@@ -92,7 +120,6 @@ export default function ConfiguracoesPage() {
     );
   }
 
-  const linkAtual = `${typeof window !== "undefined" ? window.location.origin : ""}/racha/${racha?.codigo}`;
   const linkNovo = `${typeof window !== "undefined" ? window.location.origin : ""}/racha/${codigo}`;
 
   return (
@@ -104,8 +131,9 @@ export default function ConfiguracoesPage() {
         </p>
       </div>
 
+      {/* Card Racha */}
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 flex flex-col gap-5">
-        {/* Nome */}
+        <h2 className="text-white font-bold">📋 Informações do Racha</h2>
         <div className="flex flex-col gap-2">
           <label className="text-gray-400 text-sm font-medium">
             Nome do racha
@@ -114,12 +142,9 @@ export default function ConfiguracoesPage() {
             type="text"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 transition-colors"
-            placeholder="Ex: Racha da Quinta"
+            className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-500 transition-colors"
           />
         </div>
-
-        {/* Descrição */}
         <div className="flex flex-col gap-2">
           <label className="text-gray-400 text-sm font-medium">
             Descrição <span className="text-gray-600">(opcional)</span>
@@ -128,12 +153,9 @@ export default function ConfiguracoesPage() {
             value={descricao}
             onChange={(e) => setDescricao(e.target.value)}
             rows={3}
-            className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 transition-colors resize-none"
-            placeholder="Ex: Racha toda quinta-feira às 19h"
+            className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-500 transition-colors resize-none"
           />
         </div>
-
-        {/* Código */}
         <div className="flex flex-col gap-2">
           <label className="text-gray-400 text-sm font-medium">
             Código do racha
@@ -142,45 +164,90 @@ export default function ConfiguracoesPage() {
             type="text"
             value={codigo}
             onChange={(e) => handleCodigo(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 transition-colors font-mono"
-            placeholder="Ex: RACHA-MEUTIME"
+            className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white font-mono focus:outline-none focus:border-green-500 transition-colors"
           />
           <p className="text-gray-600 text-xs">
             Somente letras maiúsculas, números e hífen
           </p>
         </div>
-
-        {/* Preview do link */}
         <div className="bg-gray-800 rounded-xl px-4 py-3">
           <p className="text-gray-500 text-xs mb-1">Link de acesso</p>
-          <p
-            className={`text-xs font-mono break-all transition-colors ${
-              codigo !== racha?.codigo ? "text-yellow-400" : "text-green-400"
-            }`}
-          >
+          <p className="text-green-400 text-xs font-mono break-all">
             {linkNovo}
           </p>
-          {codigo !== racha?.codigo && (
-            <p className="text-yellow-500 text-xs mt-2">
-              ⚠️ O link atual <span className="font-mono">{linkAtual}</span>{" "}
-              deixará de funcionar após salvar.
-            </p>
-          )}
         </div>
-
         {erro && <p className="text-red-400 text-sm">{erro}</p>}
         {sucesso && (
-          <p className="text-green-400 text-sm">
-            ✅ Configurações salvas com sucesso!
-          </p>
+          <p className="text-green-400 text-sm">✅ Salvo com sucesso!</p>
         )}
-
         <button
-          onClick={handleSalvar}
+          onClick={handleSalvarRacha}
           disabled={salvando}
           className="w-full py-3 rounded-xl bg-green-500 hover:bg-green-400 disabled:opacity-50 text-black font-bold transition-colors"
         >
           {salvando ? "Salvando..." : "Salvar alterações"}
+        </button>
+      </div>
+
+      {/* Card Financeiro */}
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 flex flex-col gap-5">
+        <h2 className="text-white font-bold">💰 Financeiro & PIX</h2>
+        <div className="flex flex-col gap-2">
+          <label className="text-gray-400 text-sm font-medium">
+            Valor da mensalidade (R$)
+          </label>
+          <input
+            type="number"
+            value={mensalidade}
+            onChange={(e) => setMensalidade(e.target.value)}
+            placeholder="Ex: 50.00"
+            step="0.01"
+            min="0"
+            className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 transition-colors"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label className="text-gray-400 text-sm font-medium">Chave PIX</label>
+          <input
+            type="text"
+            value={pixChave}
+            onChange={(e) => setPixChave(e.target.value)}
+            placeholder="CPF, email, telefone ou chave aleatória"
+            className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 transition-colors"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label className="text-gray-400 text-sm font-medium">
+            Nome do titular
+          </label>
+          <input
+            type="text"
+            value={pixTitular}
+            onChange={(e) => setPixTitular(e.target.value)}
+            placeholder="Ex: João Silva"
+            className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 transition-colors"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label className="text-gray-400 text-sm font-medium">Banco</label>
+          <input
+            type="text"
+            value={pixBanco}
+            onChange={(e) => setPixBanco(e.target.value)}
+            placeholder="Ex: Nubank, Bradesco, Inter..."
+            className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 transition-colors"
+          />
+        </div>
+        {erroPix && <p className="text-red-400 text-sm">{erroPix}</p>}
+        {sucessoPix && (
+          <p className="text-green-400 text-sm">✅ Dados financeiros salvos!</p>
+        )}
+        <button
+          onClick={handleSalvarFinanceiro}
+          disabled={salvandoPix}
+          className="w-full py-3 rounded-xl bg-green-500 hover:bg-green-400 disabled:opacity-50 text-black font-bold transition-colors"
+        >
+          {salvandoPix ? "Salvando..." : "Salvar PIX e mensalidade"}
         </button>
       </div>
     </div>

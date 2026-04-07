@@ -93,3 +93,19 @@ export interface Escalacao {
   ativa: boolean;
   criado_em: string;
 }
+export interface Pagamento {
+  id: string;
+  racha_id: string;
+  jogador_id: string;
+  mes: number;
+  ano: number;
+  pago: boolean;
+  pago_em?: string;
+  criado_em: string;
+}
+
+export interface JogadorFinanceiro {
+  jogador: Jogador;
+  pagamentos: Pagamento[];
+  mesesAtraso: number;
+}

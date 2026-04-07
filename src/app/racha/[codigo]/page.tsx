@@ -1,5 +1,6 @@
 "use client";
 
+import { getMesesRecentes, calcularAtraso } from "@/lib/utils/meses";
 import { getSupabase } from "@/lib/db/supabase";
 import { dbGetEscalacaoAtivaPublico } from "@/lib/db/publico.db";
 import CampoEscalacao from "@/components/CampoEscalacao";
@@ -25,6 +26,8 @@ import {
 } from "@/types";
 
 export default function DashboardPublicoPage() {
+  const [jogadoresFinanceiro, setJogadoresFinanceiro] = useState<any[]>([]);
+  const [pagamentosPublico, setPagamentosPublico] = useState<any[]>([]);
   const [escalacao, setEscalacao] = useState<Escalacao | null>(null);
   const [jogadoresPublico, setJogadoresPublico] = useState<Jogador[]>([]);
   const params = useParams();
@@ -85,6 +88,19 @@ export default function DashboardPublicoPage() {
           setJogadoresPublico([]);
         }
       }
+
+      // Carrega financeiro
+      const { data: jogs } = await getSupabase()
+        .from("jogadores")
+        .select("*")
+        .eq("racha_id", r.id)
+        .eq("ativo", true);
+      const { data: pags } = await getSupabase()
+        .from("pagamentos")
+        .select("*")
+        .eq("racha_id", r.id);
+      setJogadoresFinanceiro(jogs ?? []);
+      setPagamentosPublico(pags ?? []);
 
       setLoading(false);
     }
@@ -413,6 +429,17 @@ export default function DashboardPublicoPage() {
           </div>
         </Link>
 
+        {/* Financeiro */}
+        {(() => {
+          const meses = getMesesRecentes(3);
+          const devedores = stats.filter((s) => {
+            const j = s.jogador as any;
+            if (!j) return false;
+            return true;
+          });
+          return null;
+        })()}
+
         {/* Cartões */}
         <Link href={`/racha/${codigo}/cartoes`}>
           <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 hover:border-gray-700 transition-colors cursor-pointer">
@@ -471,6 +498,76 @@ export default function DashboardPublicoPage() {
             )}
           </div>
         </Link>
+
+        {/* Card Financeiro */}
+        {jogadoresFinanceiro.length > 0 && (
+          <Link href={`/racha/${codigo}/financeiro`}>
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 hover:border-gray-700 transition-colors cursor-pointer">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span>💰</span>
+                  <span className="text-white font-bold">Mensalidades</span>
+                </div>
+                <span className="text-gray-500 text-xs">ver todos →</span>
+              </div>
+              {(() => {
+                const meses = getMesesRecentes(3);
+                const devedores = [...jogadoresFinanceiro]
+                  .map((j) => ({
+                    j,
+                    atraso: calcularAtraso(j.id, pagamentosPublico, meses),
+                  }))
+                  .filter((x) => x.atraso > 0)
+                  .sort((a, b) => b.atraso - a.atraso)
+                  .slice(0, 5);
+                if (devedores.length === 0) {
+                  return (
+                    <p className="text-green-400 text-sm text-center py-2">
+                      ✅ Todos em dia!
+                    </p>
+                  );
+                }
+                return (
+                  <div className="flex flex-col gap-2">
+                    {devedores.map(({ j, atraso }) => (
+                      <div key={j.id} className="flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-full bg-gray-800 overflow-hidden flex-shrink-0">
+                          {j.foto_url ? (
+                            <img
+                              src={j.foto_url}
+                              alt=""
+                              style={{
+                                width: 28,
+                                height: 28,
+                                objectFit: "cover",
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white">
+                              {j.nome.charAt(0)}
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-white text-sm flex-1">
+                          {j.nome}
+                        </span>
+                        <span
+                          className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                            atraso >= 2
+                              ? "bg-red-500/20 text-red-400"
+                              : "bg-yellow-500/20 text-yellow-400"
+                          }`}
+                        >
+                          {atraso} {atraso === 1 ? "mês" : "meses"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          </Link>
+        )}
       </main>
     </div>
   );
