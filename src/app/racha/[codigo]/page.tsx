@@ -1,5 +1,8 @@
 "use client";
 
+import { getSupabase } from "@/lib/db/supabase";
+import { dbGetEscalacaoAtivaPublico } from "@/lib/db/publico.db";
+import CampoEscalacao from "@/components/CampoEscalacao";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -14,10 +17,11 @@ import {
 import { Racha, Estatistica, Notificacao, Enquete, Partida } from "@/types";
 
 export default function DashboardPublicoPage() {
+  const [escalacao, setEscalacao] = useState<Escalacao | null>(null);
+  const [jogadoresPublico, setJogadoresPublico] = useState<Jogador[]>([]);
   const params = useParams();
   const router = useRouter();
   const codigo = params.codigo as string;
-
   const [racha, setRacha] = useState<Racha | null>(null);
   const [stats, setStats] = useState<Estatistica[]>([]);
   const [notificacao, setNotificacao] = useState<Notificacao | null>(null);
@@ -34,22 +38,46 @@ export default function DashboardPublicoPage() {
       if (!r) return setNotFound(true);
       setRacha(r);
 
-      const [s, n, e, p] = await Promise.all([
+      const [s, n, e, p, esc] = await Promise.all([
         dbGetEstatisticasPublico(r.id),
         dbGetNotificacaoAtivaPublico(r.id),
         dbGetEnqueteAtivaPublico(r.id),
         dbGetUltimaPartidaPublico(r.id),
+        dbGetEscalacaoAtivaPublico(r.id),
       ]);
+
       setStats(s);
       setNotificacao(n);
       setUltimaPartida(p);
+      setEscalacao(esc);
 
-      // Verifica voto salvo usando o id da enquete
+      // Verifica voto salvo
       if (e?.id) {
         const votoSalvo = localStorage.getItem(`voto_enquete_${e.id}`);
         if (votoSalvo) setVotou(votoSalvo);
       }
       setEnquete(e);
+
+      // Carrega jogadores da escalação separadamente
+      if (
+        esc &&
+        (esc.jogadores_time_a?.length > 0 || esc.jogadores_time_b?.length > 0)
+      ) {
+        const todosIds = [
+          ...(esc.jogadores_time_a ?? []),
+          ...(esc.jogadores_time_b ?? []),
+        ];
+        try {
+          const { data: jogs } = await getSupabase()
+            .from("jogadores")
+            .select("*")
+            .in("id", todosIds);
+          setJogadoresPublico(jogs ?? []);
+        } catch {
+          setJogadoresPublico([]);
+        }
+      }
+
       setLoading(false);
     }
     carregar();
@@ -146,6 +174,20 @@ export default function DashboardPublicoPage() {
             </div>
             <p className="text-white font-semibold">{notificacao.titulo}</p>
             <p className="text-gray-400 text-sm mt-1">{notificacao.mensagem}</p>
+          </div>
+        )}
+
+        {/* Escalação */}
+        {escalacao && (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <span>🏟️</span>
+              <span className="text-white font-bold">Escalação</span>
+            </div>
+            <CampoEscalacao
+              escalacao={escalacao}
+              jogadores={jogadoresPublico}
+            />{" "}
           </div>
         )}
 

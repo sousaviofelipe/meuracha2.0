@@ -22,6 +22,7 @@ export default function AdminLayout({
   const links = [
     { href: "/admin/dashboard", label: "Dashboard", icon: "📊" },
     { href: "/admin/jogadores", label: "Jogadores", icon: "👤" },
+    { href: "/admin/escalacao", label: "Escalação", icon: "🏟️" },
     { href: "/admin/partidas", label: "Partidas", icon: "⚽" },
     { href: "/admin/notificacoes", label: "Notificações", icon: "🔔" },
     { href: "/admin/enquetes", label: "Enquetes", icon: "📋" },

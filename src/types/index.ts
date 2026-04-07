@@ -82,3 +82,14 @@ export interface EnqueteOpcao {
   opcao: string;
   votos: number;
 }
+
+export interface Escalacao {
+  id: string;
+  racha_id: string;
+  nome_time_a: string;
+  nome_time_b: string;
+  jogadores_time_a: string[];
+  jogadores_time_b: string[];
+  ativa: boolean;
+  criado_em: string;
+}

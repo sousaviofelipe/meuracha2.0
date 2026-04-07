@@ -1,3 +1,4 @@
+import { Escalacao } from "@/types";
 import { getSupabase } from "@/lib/db/supabase";
 import {
   Racha,
@@ -7,6 +8,20 @@ import {
   Partida,
   EventoPartida,
 } from "@/types";
+
+export async function dbGetEscalacaoAtivaPublico(
+  rachaId: string,
+): Promise<Escalacao | null> {
+  const { data } = await getSupabase()
+    .from("escalacoes")
+    .select("*")
+    .eq("racha_id", rachaId)
+    .eq("ativa", true)
+    .order("criado_em", { ascending: false })
+    .limit(1)
+    .single();
+  return data;
+}
 
 export async function dbGetRachaPorCodigo(
   codigo: string,

@@ -1,5 +1,20 @@
 import { getSupabase } from "@/lib/db/supabase";
 import { Racha, Estatistica, Notificacao, Enquete, Partida } from "@/types";
+import { Escalacao } from "@/types";
+
+export async function dbGetEscalacaoAtivaRacha(
+  rachaId: string,
+): Promise<Escalacao | null> {
+  const { data } = await getSupabase()
+    .from("escalacoes")
+    .select("*")
+    .eq("racha_id", rachaId)
+    .eq("ativa", true)
+    .order("criado_em", { ascending: false })
+    .limit(1)
+    .single();
+  return data;
+}
 
 export async function dbGetRachaPorAdmin(
   adminId: string,
