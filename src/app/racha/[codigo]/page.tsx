@@ -1,6 +1,5 @@
 "use client";
 
-import { Escalacao } from "@/types";
 import { getSupabase } from "@/lib/db/supabase";
 import { dbGetEscalacaoAtivaPublico } from "@/lib/db/publico.db";
 import CampoEscalacao from "@/components/CampoEscalacao";
@@ -15,7 +14,15 @@ import {
   dbGetUltimaPartidaPublico,
   dbVotarPublico,
 } from "@/lib/db/publico.db";
-import { Racha, Estatistica, Notificacao, Enquete, Partida } from "@/types";
+import {
+  Racha,
+  Estatistica,
+  Notificacao,
+  Enquete,
+  Partida,
+  Escalacao,
+  Jogador,
+} from "@/types";
 
 export default function DashboardPublicoPage() {
   const [escalacao, setEscalacao] = useState<Escalacao | null>(null);
