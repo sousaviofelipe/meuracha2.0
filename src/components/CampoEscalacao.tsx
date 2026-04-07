@@ -7,36 +7,43 @@ interface Props {
   jogadores: Jogador[];
 }
 
-function Avatar({ jogador, cor }: { jogador?: Jogador; cor: string }) {
-  if (!jogador) return null;
+const POSICOES = ["Goleiro", "Defensor", "Meio-campo", "Atacante"] as const;
+const POSICAO_LABEL: Record<string, string> = {
+  Goleiro: "GOL",
+  Defensor: "DEF",
+  "Meio-campo": "MEI",
+  Atacante: "ATA",
+};
+
+function Avatar({ jogador, cor }: { jogador: Jogador; cor: string }) {
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-1" style={{ minWidth: 44 }}>
       <div
         className="rounded-full overflow-hidden border-2 flex-shrink-0"
-        style={{ width: 36, height: 36, borderColor: cor }}
+        style={{ width: 38, height: 38, borderColor: cor }}
       >
         {jogador.foto_url ? (
           <img
             src={jogador.foto_url}
             alt={jogador.nome}
             style={{
-              width: 36,
-              height: 36,
+              width: 38,
+              height: 38,
               objectFit: "cover",
               display: "block",
             }}
           />
         ) : (
           <div
-            className="w-full h-full flex items-center justify-center text-white text-xs font-bold"
-            style={{ backgroundColor: cor + "40" }}
+            className="w-full h-full flex items-center justify-center text-white text-sm font-black"
+            style={{ background: cor + "40" }}
           >
             {jogador.nome.charAt(0).toUpperCase()}
           </div>
         )}
       </div>
       <span
-        className="text-white text-center font-medium leading-tight"
+        className="text-white font-medium text-center leading-tight"
         style={{
           fontSize: 9,
           maxWidth: 44,
@@ -51,136 +58,154 @@ function Avatar({ jogador, cor }: { jogador?: Jogador; cor: string }) {
   );
 }
 
-function LinhaJogadores({
+function ColunaTime({
+  nome,
+  ids,
   jogadores,
   cor,
+  corBg,
 }: {
-  jogadores: (Jogador | undefined)[];
+  nome: string;
+  ids: string[];
+  jogadores: Jogador[];
   cor: string;
+  corBg: string;
 }) {
-  const validos = jogadores.filter(Boolean);
-  if (validos.length === 0) return null;
+  const findJogador = (id: string) => jogadores.find((j) => j.id === id);
+
+  const porPosicao: Record<string, Jogador[]> = {
+    Goleiro: [],
+    Defensor: [],
+    "Meio-campo": [],
+    Atacante: [],
+    Outros: [],
+  };
+
+  ids.forEach((id) => {
+    const j = findJogador(id);
+    if (!j) return;
+    if (porPosicao[j.posicao] !== undefined) {
+      porPosicao[j.posicao].push(j);
+    } else {
+      porPosicao["Outros"].push(j);
+    }
+  });
+
+  const totalJogadores = ids
+    .map((id) => findJogador(id))
+    .filter(Boolean).length;
+
   return (
-    <div className="flex items-center justify-around w-full px-2">
-      {validos.map((j, i) => (
-        <Avatar key={i} jogador={j} cor={cor} />
-      ))}
+    <div className="flex-1 flex flex-col" style={{ minWidth: 0 }}>
+      {/* Header do time */}
+      <div
+        className="py-2.5 text-center font-black text-white text-sm sticky top-0"
+        style={{ background: corBg }}
+      >
+        {nome}
+        <span className="ml-1 text-xs opacity-70">({totalJogadores})</span>
+      </div>
+
+      {/* Linhas por posição */}
+      <div className="flex flex-col flex-1" style={{ background: "#14532d" }}>
+        {POSICOES.map((posicao, idx) => {
+          const lista = porPosicao[posicao];
+          return (
+            <div
+              key={posicao}
+              className="flex flex-col gap-2 py-3 px-2"
+              style={{
+                borderBottom:
+                  idx < POSICOES.length - 1
+                    ? "1px dashed rgba(255,255,255,0.1)"
+                    : "none",
+                minHeight: 80,
+              }}
+            >
+              <span
+                className="font-bold tracking-widest text-center"
+                style={{ fontSize: 9, color: cor, opacity: 0.8 }}
+              >
+                {POSICAO_LABEL[posicao]}
+              </span>
+              {lista.length === 0 ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <span
+                    style={{ fontSize: 10, color: "rgba(255,255,255,0.2)" }}
+                  >
+                    —
+                  </span>
+                </div>
+              ) : (
+                <div className="flex flex-wrap justify-center gap-2">
+                  {lista.map((j) => (
+                    <Avatar key={j.id} jogador={j} cor={cor} />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Outros (sem posição padrão) */}
+        {porPosicao["Outros"].length > 0 && (
+          <div className="flex flex-col gap-2 py-3 px-2">
+            <span
+              className="font-bold tracking-widest text-center"
+              style={{ fontSize: 9, color: cor, opacity: 0.8 }}
+            >
+              OUT
+            </span>
+            <div className="flex flex-wrap justify-center gap-2">
+              {porPosicao["Outros"].map((j) => (
+                <Avatar key={j.id} jogador={j} cor={cor} />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 export default function CampoEscalacao({ escalacao, jogadores }: Props) {
-  const findJogador = (id: string) => jogadores.find((j) => j.id === id);
-
-  // Separa por posição para cada time
-  function distribuirPorPosicao(ids: string[]) {
-    const js = ids.map((id) => findJogador(id)).filter(Boolean) as Jogador[];
-    return {
-      goleiros: js.filter((j) => j.posicao === "Goleiro"),
-      defensores: js.filter((j) => j.posicao === "Defensor"),
-      meios: js.filter((j) => j.posicao === "Meio-campo"),
-      atacantes: js.filter((j) => j.posicao === "Atacante"),
-      // Jogadores sem posição específica
-      outros: js.filter(
-        (j) =>
-          !["Goleiro", "Defensor", "Meio-campo", "Atacante"].includes(
-            j.posicao,
-          ),
-      ),
-    };
-  }
-
-  // Distribui jogadores sem posição nas linhas
-  function distribuirSemPosicao(ids: string[]) {
-    const js = ids.map((id) => findJogador(id)).filter(Boolean) as Jogador[];
-    const total = js.length;
-    if (total === 0) return { linha1: [], linha2: [], linha3: [], goleiro: [] };
-
-    const goleiros = js.filter((j) => j.posicao === "Goleiro");
-    const resto = js.filter((j) => j.posicao !== "Goleiro");
-
-    // Divide o resto em 3 linhas
-    const porLinha = Math.ceil(resto.length / 3);
-    return {
-      goleiro: goleiros.length > 0 ? goleiros : resto.slice(0, 1),
-      linha1: resto.slice(0, porLinha),
-      linha2: resto.slice(porLinha, porLinha * 2),
-      linha3: resto.slice(porLinha * 2),
-    };
-  }
-
-  const timeA = distribuirSemPosicao(escalacao.jogadores_time_a);
-  const timeB = distribuirSemPosicao(escalacao.jogadores_time_b);
-
-  const COR_A = "#22c55e"; // verde
-  const COR_B = "#f97316"; // laranja
+  const COR_A = "#22c55e";
+  const COR_B = "#f97316";
 
   return (
-    <div
-      className="w-full rounded-2xl overflow-hidden"
-      style={{ background: "#166534", border: "2px solid #15803d" }}
-    >
-      {/* Times header */}
-      <div className="grid grid-cols-2">
-        <div className="py-2 text-center" style={{ background: COR_A + "30" }}>
-          <span className="text-white font-black text-sm">
-            {escalacao.nome_time_a}
-          </span>
-        </div>
-        <div className="py-2 text-center" style={{ background: COR_B + "30" }}>
-          <span className="text-white font-black text-sm">
-            {escalacao.nome_time_b}
-          </span>
-        </div>
-      </div>
+    <div className="w-full rounded-2xl overflow-hidden border border-green-900">
+      <div className="flex" style={{ minHeight: 400 }}>
+        {/* Time A */}
+        <ColunaTime
+          nome={escalacao.nome_time_a}
+          ids={escalacao.jogadores_time_a ?? []}
+          jogadores={jogadores}
+          cor={COR_A}
+          corBg="#15803d"
+        />
 
-      {/* Campo */}
-      <div className="relative flex flex-col" style={{ minHeight: 380 }}>
-        {/* Linhas do campo */}
+        {/* Divisor central */}
         <div
-          className="absolute inset-0 flex flex-col pointer-events-none"
-          style={{ opacity: 0.15 }}
+          className="flex items-center justify-center flex-shrink-0"
+          style={{ width: 24, background: "#166534" }}
         >
-          <div className="flex-1" />
-          <div style={{ height: 1, background: "white", margin: "0 20px" }} />
-          <div className="flex-1" />
+          <div
+            style={{
+              width: 1,
+              height: "100%",
+              background: "rgba(255,255,255,0.2)",
+            }}
+          />
         </div>
 
-        {/* Círculo central */}
-        <div
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-          style={{
-            width: 60,
-            height: 60,
-            borderRadius: "50%",
-            border: "1px solid rgba(255,255,255,0.15)",
-          }}
+        {/* Time B */}
+        <ColunaTime
+          nome={escalacao.nome_time_b}
+          ids={escalacao.jogadores_time_b ?? []}
+          jogadores={jogadores}
+          cor={COR_B}
+          corBg="#9a3412"
         />
-
-        {/* Time A — lado de cima */}
-        <div className="flex flex-col gap-3 pt-4 pb-2" style={{ flex: 1 }}>
-          <LinhaJogadores jogadores={timeA.linha3} cor={COR_A} />
-          <LinhaJogadores jogadores={timeA.linha2} cor={COR_A} />
-          <LinhaJogadores jogadores={timeA.linha1} cor={COR_A} />
-          <LinhaJogadores jogadores={timeA.goleiro} cor={COR_A} />
-        </div>
-
-        {/* Linha do meio */}
-        <div
-          style={{
-            height: 1,
-            background: "rgba(255,255,255,0.3)",
-            margin: "0 16px",
-          }}
-        />
-
-        {/* Time B — lado de baixo */}
-        <div className="flex flex-col gap-3 pt-2 pb-4" style={{ flex: 1 }}>
-          <LinhaJogadores jogadores={timeB.goleiro} cor={COR_B} />
-          <LinhaJogadores jogadores={timeB.linha1} cor={COR_B} />
-          <LinhaJogadores jogadores={timeB.linha2} cor={COR_B} />
-          <LinhaJogadores jogadores={timeB.linha3} cor={COR_B} />
-        </div>
       </div>
     </div>
   );
