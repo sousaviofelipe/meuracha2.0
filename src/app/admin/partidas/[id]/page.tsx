@@ -345,14 +345,12 @@ export default function FichaTecnicaPage() {
                               <span className="text-white text-xs flex-1 truncate">
                                 {j?.nome ?? "—"}
                               </span>
-                              {!partida?.encerrada && (
-                                <button
-                                  onClick={() => handleRemoverEvento(e.id)}
-                                  className="text-gray-600 hover:text-red-400 text-xs"
-                                >
-                                  ✕
-                                </button>
-                              )}
+                              <button
+                                onClick={() => handleRemoverEvento(e.id)}
+                                className="text-gray-600 hover:text-red-400 text-xs"
+                              >
+                                ✕
+                              </button>
                             </div>
                           );
                         })

@@ -70,3 +70,14 @@ export async function uploadFotoJogador(
   const { data } = getSupabase().storage.from("jogadores").getPublicUrl(path);
   return data.publicUrl;
 }
+
+export async function dbToggleMensalista(
+  id: string,
+  mensalista: boolean,
+): Promise<void> {
+  const { error } = await getSupabase()
+    .from("jogadores")
+    .update({ mensalista })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+}

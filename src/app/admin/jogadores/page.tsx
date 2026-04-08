@@ -11,6 +11,7 @@ import {
   editarJogador,
   toggleJogador,
   deletarJogador,
+  toggleMensalista,
 } from "@/lib/services/jogadores.service";
 import { Jogador, Posicao, Racha } from "@/types";
 
@@ -115,6 +116,15 @@ export default function JogadoresPage() {
     }
   }
 
+  async function handleToggleMensalista(j: Jogador) {
+    await toggleMensalista(j.id, !j.mensalista);
+    setJogadores((prev) =>
+      prev.map((x) =>
+        x.id === j.id ? { ...x, mensalista: !j.mensalista } : x,
+      ),
+    );
+  }
+
   async function handleToggle(j: Jogador) {
     await toggleJogador(j.id, !j.ativo);
     setJogadores((prev) =>
@@ -213,6 +223,12 @@ export default function JogadoresPage() {
                 >
                   {j.posicao}
                 </span>
+
+                {!j.mensalista && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-500 mt-1">
+                    Não mensalista
+                  </span>
+                )}
               </div>
 
               {/* Ações */}
@@ -228,6 +244,21 @@ export default function JogadoresPage() {
                   className="text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded-lg transition-colors"
                 >
                   {j.ativo ? "🔴" : "🟢"}
+                </button>
+                <button
+                  onClick={() => handleToggleMensalista(j)}
+                  title={
+                    j.mensalista
+                      ? "Desativar mensalidade"
+                      : "Ativar mensalidade"
+                  }
+                  className={`text-xs px-2 py-1 rounded-lg transition-colors ${
+                    j.mensalista
+                      ? "bg-green-500/20 text-green-400 hover:bg-green-500/30"
+                      : "bg-gray-800 text-gray-600 hover:bg-gray-700"
+                  }`}
+                >
+                  💰
                 </button>
                 <button
                   onClick={() => handleDeletar(j)}

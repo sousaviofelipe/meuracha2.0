@@ -5,6 +5,7 @@ import {
   dbToggleJogador,
   dbDeletarJogador,
   uploadFotoJogador,
+  dbToggleMensalista,
 } from "@/lib/db/jogadores.db";
 import { Jogador, Posicao } from "@/types";
 
@@ -46,4 +47,11 @@ export async function toggleJogador(id: string, ativo: boolean): Promise<void> {
 
 export async function deletarJogador(id: string): Promise<void> {
   return dbDeletarJogador(id);
+}
+
+export async function toggleMensalista(
+  id: string,
+  mensalista: boolean,
+): Promise<void> {
+  return dbToggleMensalista(id, mensalista);
 }

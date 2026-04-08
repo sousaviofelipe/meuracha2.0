@@ -37,7 +37,7 @@ export default function FinanceiroPage() {
         listarJogadores(r.id),
         dbGetTodosPagamentos(r.id),
       ]);
-      setJogadores(j.filter((x) => x.ativo));
+      setJogadores(j.filter((x) => x.ativo && x.mensalista));
       setPagamentos(p);
       setLoading(false);
     }

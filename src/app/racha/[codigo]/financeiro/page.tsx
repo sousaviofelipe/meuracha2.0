@@ -37,6 +37,7 @@ export default function FinanceiroPublicoPage() {
         .select("*")
         .eq("racha_id", r.id)
         .eq("ativo", true)
+        .eq("mensalista", true)
         .order("nome");
 
       const { data: pags } = await getSupabase()

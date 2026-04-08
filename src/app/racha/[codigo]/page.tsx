@@ -94,7 +94,8 @@ export default function DashboardPublicoPage() {
         .from("jogadores")
         .select("*")
         .eq("racha_id", r.id)
-        .eq("ativo", true);
+        .eq("ativo", true)
+        .eq("mensalista", true);
       const { data: pags } = await getSupabase()
         .from("pagamentos")
         .select("*")

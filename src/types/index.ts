@@ -21,6 +21,7 @@ export interface Jogador {
   posicao: Posicao;
   foto_url?: string;
   ativo: boolean;
+  mensalista: boolean;
   criado_em: string;
 }
 
