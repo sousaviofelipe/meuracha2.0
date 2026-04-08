@@ -11,7 +11,6 @@ import {
   dbGetRachaPorCodigo,
   dbGetEstatisticasPublico,
   dbGetNotificacaoAtivaPublico,
-  dbGetEnqueteAtivaPublico,
   dbGetUltimaPartidaPublico,
   dbVotarPublico,
   dbDesvotarPublico,
@@ -37,12 +36,12 @@ export default function DashboardPublicoPage() {
   const [racha, setRacha] = useState<Racha | null>(null);
   const [stats, setStats] = useState<Estatistica[]>([]);
   const [notificacao, setNotificacao] = useState<Notificacao | null>(null);
-  const [enquete, setEnquete] = useState<Enquete | null>(null);
+  const [enquetes, setEnquetes] = useState<Enquete[]>([]);
   const [ultimaPartida, setUltimaPartida] = useState<Partida | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [votando, setVotando] = useState(false);
-  const [votou, setVotou] = useState<string | null>(null);
+  const [votos, setVotos] = useState<Record<string, string>>({});
 
   useEffect(() => {
     async function carregar() {
@@ -50,10 +49,9 @@ export default function DashboardPublicoPage() {
       if (!r) return setNotFound(true);
       setRacha(r);
 
-      const [s, n, e, p, esc] = await Promise.all([
+      const [s, n, p, esc] = await Promise.all([
         dbGetEstatisticasPublico(r.id),
         dbGetNotificacaoAtivaPublico(r.id),
-        dbGetEnqueteAtivaPublico(r.id),
         dbGetUltimaPartidaPublico(r.id),
         dbGetEscalacaoAtivaPublico(r.id),
       ]);
@@ -62,13 +60,6 @@ export default function DashboardPublicoPage() {
       setNotificacao(n);
       setUltimaPartida(p);
       setEscalacao(esc);
-
-      // Verifica voto salvo
-      if (e?.id) {
-        const votoSalvo = localStorage.getItem(`voto_enquete_${e.id}`);
-        if (votoSalvo) setVotou(votoSalvo);
-      }
-      setEnquete(e);
 
       // Carrega jogadores da escalação separadamente
       if (
@@ -104,29 +95,62 @@ export default function DashboardPublicoPage() {
       setJogadoresFinanceiro(jogs ?? []);
       setPagamentosPublico(pags ?? []);
 
+      // Busca todas as enquetes ativas
+      const { data: enqs } = await getSupabase()
+        .from("enquetes")
+        .select(
+          "*, opcoes:enquete_opcoes(*, jogador:jogadores(id, nome, foto_url))",
+        )
+        .eq("racha_id", r.id)
+        .eq("ativa", true)
+        .order("criado_em", { ascending: false });
+
+      setEnquetes(enqs ?? []);
+
+      // Carrega votos salvos
+      const votosSalvos: Record<string, string> = {};
+
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith("voto_enquete_"))
+        .forEach((k) => {
+          const id = k.replace("voto_enquete_", "");
+          votosSalvos[id] = localStorage.getItem(k) ?? "";
+        });
+
+      setVotos(votosSalvos);
       setLoading(false);
     }
     carregar();
   }, [codigo]);
 
-  async function handleVotar(opcaoId: string) {
-    if (votando || !enquete) return;
+  async function handleVotar(enqueteId: string, opcaoId: string) {
+    if (votando || !racha) return;
+    const votouAtual = votos[enqueteId];
     const jaVotouETrocou =
-      votou && localStorage.getItem(`trocou_voto_${enquete.id}`);
+      votouAtual && localStorage.getItem(`trocou_voto_${enqueteId}`);
     if (jaVotouETrocou) return;
-    if (votou === opcaoId) return;
+    if (votouAtual === opcaoId) return;
 
     setVotando(true);
     try {
-      if (votou) {
-        await dbDesvotarPublico(votou);
-        localStorage.setItem(`trocou_voto_${enquete.id}`, "1");
+      if (votouAtual) {
+        await dbDesvotarPublico(votouAtual);
+        localStorage.setItem(`trocou_voto_${enqueteId}`, "1");
       }
       await dbVotarPublico(opcaoId);
-      setVotou(opcaoId);
-      localStorage.setItem(`voto_enquete_${enquete.id}`, opcaoId);
-      const e = await dbGetEnqueteAtivaPublico(racha!.id);
-      setEnquete(e);
+      setVotos((prev) => ({ ...prev, [enqueteId]: opcaoId }));
+      localStorage.setItem(`voto_enquete_${enqueteId}`, opcaoId);
+
+      // Recarrega enquete específica
+      const { data } = await getSupabase()
+        .from("enquetes")
+        .select(
+          "*, opcoes:enquete_opcoes(*, jogador:jogadores(id, nome, foto_url))",
+        )
+        .eq("id", enqueteId)
+        .single();
+      if (data)
+        setEnquetes((prev) => prev.map((e) => (e.id === enqueteId ? data : e)));
     } finally {
       setVotando(false);
     }
@@ -226,125 +250,155 @@ export default function DashboardPublicoPage() {
           </div>
         )}
 
-        {/* Enquete */}
-        {enquete && (
-          <div className="bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <span>📋</span>
-              <span className="text-blue-400 font-bold text-sm">
-                Enquete OK
-              </span>
-            </div>
-            <p className="text-white font-semibold mb-4">{enquete.pergunta}</p>
-            <div className="flex flex-col gap-2">
-              {enquete.opcoes?.map((op) => {
-                const total =
-                  enquete.opcoes?.reduce((acc, o) => acc + o.votos, 0) ?? 0;
-                const pct =
-                  total > 0 ? Math.round((op.votos / total) * 100) : 0;
-                const selecionada = votou === op.id;
-                const jaVotouETrocou =
-                  votou && localStorage.getItem(`trocou_voto_${enquete.id}`);
-                const jogador = (op as any).jogador;
-                const isJogador = (enquete as any).tipo === "jogador";
+        {/* Enquetes */}
+        {enquetes.map((enquete) => {
+          const votou = votos[enquete.id] ?? null;
+          const jaVotouETrocou =
+            votou && localStorage.getItem(`trocou_voto_${enquete.id}`);
+          const isJogador = (enquete as any).tipo === "jogador";
 
-                return isJogador ? (
-                  <button
-                    key={op.id}
-                    onClick={() =>
-                      !jaVotouETrocou ? handleVotar(op.id) : null
-                    }
-                    disabled={!!jaVotouETrocou}
-                    className={`flex items-center gap-3 w-full p-2 rounded-xl border transition-all ${
-                      selecionada
-                        ? "border-blue-400 bg-blue-500/20"
-                        : "border-gray-700 bg-gray-800 hover:border-blue-500/50"
-                    }`}
-                  >
-                    <div
-                      className="rounded-full overflow-hidden flex-shrink-0"
-                      style={{ width: 36, height: 36 }}
+          return (
+            <div
+              key={enquete.id}
+              className="bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4"
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <span>{isJogador ? "👤" : "📋"}</span>
+                <span className="text-blue-400 font-bold text-sm flex-1">
+                  {enquete.pergunta}
+                </span>
+                <span className="text-gray-500 text-xs">
+                  {enquete.opcoes?.reduce((acc, o) => acc + o.votos, 0) ?? 0}{" "}
+                  votos
+                </span>
+              </div>
+
+              <div
+                className={
+                  isJogador ? "grid grid-cols-2 gap-2" : "flex flex-col gap-2"
+                }
+              >
+                {enquete.opcoes?.map((op) => {
+                  const total =
+                    enquete.opcoes?.reduce((acc, o) => acc + o.votos, 0) ?? 0;
+                  const pct =
+                    total > 0 ? Math.round((op.votos / total) * 100) : 0;
+                  const selecionada = votou === op.id;
+                  const jogador = (op as any).jogador;
+
+                  return isJogador ? (
+                    <button
+                      key={op.id}
+                      onClick={() =>
+                        !jaVotouETrocou ? handleVotar(enquete.id, op.id) : null
+                      }
+                      disabled={!!jaVotouETrocou}
+                      className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
+                        selecionada
+                          ? "border-blue-400 bg-blue-500/20"
+                          : !jaVotouETrocou
+                            ? "border-gray-700 bg-gray-800 hover:border-blue-500/50 cursor-pointer"
+                            : "border-gray-700 bg-gray-800 opacity-70 cursor-default"
+                      }`}
                     >
-                      {jogador?.foto_url ? (
-                        <img
-                          src={jogador.foto_url}
-                          alt=""
-                          style={{
-                            width: 36,
-                            height: 36,
-                            objectFit: "cover",
-                            display: "block",
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gray-700 flex items-center justify-center text-white font-bold">
-                          {op.opcao.charAt(0)}
-                        </div>
-                      )}
-                    </div>
-                    <span className="text-gray-200 text-sm flex-1 text-left">
-                      {op.opcao}
-                    </span>
-                    {votou && (
-                      <span className="text-blue-400 font-bold text-sm">
-                        {pct}%
-                      </span>
-                    )}
-                    {selecionada && <span className="text-blue-400">✓</span>}
-                  </button>
-                ) : (
-                  <button
-                    key={op.id}
-                    onClick={() =>
-                      !jaVotouETrocou ? handleVotar(op.id) : null
-                    }
-                    disabled={!!jaVotouETrocou}
-                    className={`w-full text-left rounded-xl overflow-hidden transition-all ${
-                      selecionada
-                        ? "ring-2 ring-blue-400"
-                        : "hover:ring-2 hover:ring-blue-500/50 cursor-pointer"
-                    }`}
-                  >
-                    <div className="relative bg-gray-800 px-4 py-3">
-                      {votou && (
-                        <div
-                          className="absolute inset-0 bg-blue-500/20 transition-all"
-                          style={{ width: `${pct}%` }}
-                        />
-                      )}
-                      <div className="relative flex justify-between items-center">
-                        <span className="text-gray-200 text-sm">
-                          {op.opcao}
-                        </span>
-                        {votou && (
-                          <span className="text-blue-400 font-bold text-sm">
-                            {pct}%
-                          </span>
+                      <div
+                        className="rounded-full overflow-hidden border-2 flex-shrink-0"
+                        style={{
+                          width: 48,
+                          height: 48,
+                          borderColor: selecionada ? "#60a5fa" : "#374151",
+                        }}
+                      >
+                        {jogador?.foto_url ? (
+                          <img
+                            src={jogador.foto_url}
+                            alt={jogador.nome}
+                            style={{
+                              width: 48,
+                              height: 48,
+                              objectFit: "cover",
+                              display: "block",
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-700 flex items-center justify-center text-white font-bold">
+                            {op.opcao.charAt(0)}
+                          </div>
                         )}
                       </div>
-                    </div>
-                  </button>
-                );
-              })}
+                      <span className="text-white text-xs font-medium text-center">
+                        {op.opcao}
+                      </span>
+                      {votou && (
+                        <span className="text-blue-400 font-bold text-xs">
+                          {pct}%
+                        </span>
+                      )}
+                      {selecionada && (
+                        <span className="text-blue-400 text-xs">✓</span>
+                      )}
+                    </button>
+                  ) : (
+                    <button
+                      key={op.id}
+                      onClick={() =>
+                        !jaVotouETrocou ? handleVotar(enquete.id, op.id) : null
+                      }
+                      disabled={!!jaVotouETrocou}
+                      className={`w-full text-left rounded-xl overflow-hidden transition-all ${
+                        selecionada
+                          ? "ring-2 ring-blue-400"
+                          : !jaVotouETrocou
+                            ? "hover:ring-2 hover:ring-blue-500/50 cursor-pointer"
+                            : "cursor-default"
+                      }`}
+                    >
+                      <div className="relative bg-gray-800 px-4 py-3">
+                        {votou && (
+                          <div
+                            className="absolute inset-0 bg-blue-500/20"
+                            style={{ width: `${pct}%` }}
+                          />
+                        )}
+                        <div className="relative flex justify-between items-center">
+                          <span className="text-gray-200 text-sm">
+                            {op.opcao}
+                          </span>
+                          {votou && (
+                            <span className="text-blue-400 font-bold text-sm">
+                              {pct}%
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-3 text-center">
+                {!votou && (
+                  <p className="text-gray-500 text-xs">Toque para votar</p>
+                )}
+                {votou && !jaVotouETrocou && (
+                  <p className="text-blue-400 text-xs">
+                    ✓ Votado — você pode trocar uma vez
+                  </p>
+                )}
+                {jaVotouETrocou && (
+                  <p className="text-gray-500 text-xs">✓ Voto registrado</p>
+                )}
+              </div>
+
+              <Link
+                href={`/racha/${codigo}/enquetes`}
+                className="block text-center text-blue-400 text-xs mt-3 hover:underline"
+              >
+                ver todas as enquetes →
+              </Link>
             </div>
-            {!votou && (
-              <p className="text-gray-500 text-xs mt-3 text-center">
-                Toque para votar
-              </p>
-            )}
-            {votou && (
-              <p className="text-gray-500 text-xs mt-3 text-center">
-                Voto registrado ✓
-              </p>
-            )}
-            <Link
-              href={`/racha/${codigo}/enquetes`}
-              className="block text-center text-blue-400 text-xs mt-3 hover:underline"
-            >
-              ver todas as enquetes →
-            </Link>
-          </div>
-        )}
+          );
+        })}
 
         {/* Última partida */}
         {ultimaPartida && (
