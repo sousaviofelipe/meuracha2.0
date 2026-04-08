@@ -51,7 +51,7 @@ export async function dbCriarEnqueteJogador(
     .in("id", jogadorIds);
 
   const opcoesData = jogadorIds.map((jid) => {
-    const j = jogs?.find((x) => x.id === jid);
+    const j = jogs?.find((x: any) => x.id === jid);
     return { enquete_id: data.id, opcao: j?.nome ?? "", jogador_id: jid };
   });
 
