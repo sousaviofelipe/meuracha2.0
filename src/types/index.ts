@@ -73,6 +73,7 @@ export interface Enquete {
   racha_id: string;
   pergunta: string;
   ativa: boolean;
+  tipo: "texto" | "jogador";
   criado_em: string;
   opcoes?: EnqueteOpcao[];
 }
@@ -82,6 +83,8 @@ export interface EnqueteOpcao {
   enquete_id: string;
   opcao: string;
   votos: number;
+  jogador_id?: string;
+  jogador?: Jogador;
 }
 
 export interface Escalacao {

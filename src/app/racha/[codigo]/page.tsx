@@ -14,6 +14,7 @@ import {
   dbGetEnqueteAtivaPublico,
   dbGetUltimaPartidaPublico,
   dbVotarPublico,
+  dbDesvotarPublico,
 } from "@/lib/db/publico.db";
 import {
   Racha,
@@ -109,9 +110,18 @@ export default function DashboardPublicoPage() {
   }, [codigo]);
 
   async function handleVotar(opcaoId: string) {
-    if (votou || votando || !enquete) return;
+    if (votando || !enquete) return;
+    const jaVotouETrocou =
+      votou && localStorage.getItem(`trocou_voto_${enquete.id}`);
+    if (jaVotouETrocou) return;
+    if (votou === opcaoId) return;
+
     setVotando(true);
     try {
+      if (votou) {
+        await dbDesvotarPublico(votou);
+        localStorage.setItem(`trocou_voto_${enquete.id}`, "1");
+      }
       await dbVotarPublico(opcaoId);
       setVotou(opcaoId);
       localStorage.setItem(`voto_enquete_${enquete.id}`, opcaoId);
@@ -233,16 +243,65 @@ export default function DashboardPublicoPage() {
                 const pct =
                   total > 0 ? Math.round((op.votos / total) * 100) : 0;
                 const selecionada = votou === op.id;
-                return (
+                const jaVotouETrocou =
+                  votou && localStorage.getItem(`trocou_voto_${enquete.id}`);
+                const jogador = (op as any).jogador;
+                const isJogador = (enquete as any).tipo === "jogador";
+
+                return isJogador ? (
                   <button
                     key={op.id}
-                    onClick={() => handleVotar(op.id)}
-                    disabled={!!votou || votando}
+                    onClick={() =>
+                      !jaVotouETrocou ? handleVotar(op.id) : null
+                    }
+                    disabled={!!jaVotouETrocou}
+                    className={`flex items-center gap-3 w-full p-2 rounded-xl border transition-all ${
+                      selecionada
+                        ? "border-blue-400 bg-blue-500/20"
+                        : "border-gray-700 bg-gray-800 hover:border-blue-500/50"
+                    }`}
+                  >
+                    <div
+                      className="rounded-full overflow-hidden flex-shrink-0"
+                      style={{ width: 36, height: 36 }}
+                    >
+                      {jogador?.foto_url ? (
+                        <img
+                          src={jogador.foto_url}
+                          alt=""
+                          style={{
+                            width: 36,
+                            height: 36,
+                            objectFit: "cover",
+                            display: "block",
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-700 flex items-center justify-center text-white font-bold">
+                          {op.opcao.charAt(0)}
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-gray-200 text-sm flex-1 text-left">
+                      {op.opcao}
+                    </span>
+                    {votou && (
+                      <span className="text-blue-400 font-bold text-sm">
+                        {pct}%
+                      </span>
+                    )}
+                    {selecionada && <span className="text-blue-400">✓</span>}
+                  </button>
+                ) : (
+                  <button
+                    key={op.id}
+                    onClick={() =>
+                      !jaVotouETrocou ? handleVotar(op.id) : null
+                    }
+                    disabled={!!jaVotouETrocou}
                     className={`w-full text-left rounded-xl overflow-hidden transition-all ${
-                      votou
-                        ? selecionada
-                          ? "ring-2 ring-blue-400"
-                          : "opacity-70"
+                      selecionada
+                        ? "ring-2 ring-blue-400"
                         : "hover:ring-2 hover:ring-blue-500/50 cursor-pointer"
                     }`}
                   >

@@ -63,13 +63,22 @@ export async function dbGetEnqueteAtivaPublico(
 ): Promise<Enquete | null> {
   const { data } = await getSupabase()
     .from("enquetes")
-    .select("*, opcoes:enquete_opcoes(*)")
+    .select(
+      "*, opcoes:enquete_opcoes(*, jogador:jogadores(id, nome, foto_url))",
+    )
     .eq("racha_id", rachaId)
     .eq("ativa", true)
     .order("criado_em", { ascending: false })
     .limit(1)
     .single();
   return data;
+}
+
+export async function dbDesvotarPublico(opcaoId: string): Promise<void> {
+  const { error } = await getSupabase().rpc("decrementar_voto", {
+    opcao_id: opcaoId,
+  });
+  if (error) throw new Error(error.message);
 }
 
 export async function dbGetUltimaPartidaPublico(
