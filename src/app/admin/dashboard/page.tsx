@@ -116,28 +116,43 @@ export default function DashboardPage() {
                 Enquete Ativa
               </span>
             </div>
+
             <p className="text-white font-semibold mb-3">{enquete.pergunta}</p>
+
             <div className="flex flex-col gap-2">
-              {enquete.opcoes?.map((op) => {
-                const total =
-                  enquete.opcoes?.reduce((acc, o) => acc + o.votos, 0) ?? 0;
-                const pct =
-                  total > 0 ? Math.round((op.votos / total) * 100) : 0;
-                return (
-                  <div key={op.id}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-300">{op.opcao}</span>
-                      <span className="text-blue-400 font-bold">{pct}%</span>
+              {[...(enquete.opcoes ?? [])]
+                .sort((a, b) => b.votos - a.votos)
+                .map((op) => {
+                  const total =
+                    enquete.opcoes?.reduce((acc, o) => acc + o.votos, 0) ?? 0;
+                  const pct =
+                    total > 0 ? Math.round((op.votos / total) * 100) : 0;
+
+                  return (
+                    <div
+                      key={op.id}
+                      className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl bg-gray-800/70 border border-gray-700"
+                    >
+                      {/* Nome */}
+                      <span className="text-white text-sm flex-1 truncate">
+                        {op.opcao}
+                      </span>
+
+                      {/* Barra + % */}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="w-20 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-blue-500 rounded-full transition-all"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <span className="text-blue-400 font-bold text-xs w-8 text-right">
+                          {pct}%
+                        </span>
+                      </div>
                     </div>
-                    <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-blue-500 rounded-full transition-all"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
           </div>
         </Link>

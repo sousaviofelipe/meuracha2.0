@@ -273,107 +273,125 @@ export default function DashboardPublicoPage() {
                 </span>
               </div>
 
-              <div
-                className={
-                  isJogador ? "grid grid-cols-2 gap-2" : "flex flex-col gap-2"
-                }
-              >
-                {enquete.opcoes?.map((op) => {
-                  const total =
-                    enquete.opcoes?.reduce((acc, o) => acc + o.votos, 0) ?? 0;
-                  const pct =
-                    total > 0 ? Math.round((op.votos / total) * 100) : 0;
-                  const selecionada = votou === op.id;
-                  const jogador = (op as any).jogador;
+              <div className="flex flex-col gap-2">
+                {[...(enquete.opcoes ?? [])]
+                  .sort((a, b) => (votou ? b.votos - a.votos : 0))
+                  .map((op) => {
+                    const total =
+                      enquete.opcoes?.reduce((acc, o) => acc + o.votos, 0) ?? 0;
+                    const pct =
+                      total > 0 ? Math.round((op.votos / total) * 100) : 0;
+                    const selecionada = votou === op.id;
+                    const jogador = (op as any).jogador;
 
-                  return isJogador ? (
-                    <button
-                      key={op.id}
-                      onClick={() =>
-                        !jaVotouETrocou ? handleVotar(enquete.id, op.id) : null
-                      }
-                      disabled={!!jaVotouETrocou}
-                      className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
-                        selecionada
-                          ? "border-blue-400 bg-blue-500/20"
-                          : !jaVotouETrocou
-                            ? "border-gray-700 bg-gray-800 hover:border-blue-500/50 cursor-pointer"
-                            : "border-gray-700 bg-gray-800 opacity-70 cursor-default"
-                      }`}
-                    >
-                      <div
-                        className="rounded-full overflow-hidden border-2 flex-shrink-0"
-                        style={{
-                          width: 48,
-                          height: 48,
-                          borderColor: selecionada ? "#60a5fa" : "#374151",
-                        }}
+                    return isJogador ? (
+                      <button
+                        key={op.id}
+                        onClick={() =>
+                          !jaVotouETrocou
+                            ? handleVotar(enquete.id, op.id)
+                            : null
+                        }
+                        disabled={!!jaVotouETrocou}
+                        className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl border transition-all ${
+                          selecionada
+                            ? "border-blue-400 bg-blue-500/20"
+                            : !jaVotouETrocou
+                              ? "border-gray-700 bg-gray-800 hover:border-blue-500/50 cursor-pointer"
+                              : "border-gray-700 bg-gray-800 opacity-70 cursor-default"
+                        }`}
                       >
-                        {jogador?.foto_url ? (
-                          <img
-                            src={jogador.foto_url}
-                            alt={jogador.nome}
-                            style={{
-                              width: 48,
-                              height: 48,
-                              objectFit: "cover",
-                              display: "block",
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gray-700 flex items-center justify-center text-white font-bold">
-                            {op.opcao.charAt(0)}
-                          </div>
-                        )}
-                      </div>
-                      <span className="text-white text-xs font-medium text-center">
-                        {op.opcao}
-                      </span>
-                      {votou && (
-                        <span className="text-blue-400 font-bold text-xs">
-                          {pct}%
-                        </span>
-                      )}
-                      {selecionada && (
-                        <span className="text-blue-400 text-xs">✓</span>
-                      )}
-                    </button>
-                  ) : (
-                    <button
-                      key={op.id}
-                      onClick={() =>
-                        !jaVotouETrocou ? handleVotar(enquete.id, op.id) : null
-                      }
-                      disabled={!!jaVotouETrocou}
-                      className={`w-full text-left rounded-xl overflow-hidden transition-all ${
-                        selecionada
-                          ? "ring-2 ring-blue-400"
-                          : !jaVotouETrocou
-                            ? "hover:ring-2 hover:ring-blue-500/50 cursor-pointer"
-                            : "cursor-default"
-                      }`}
-                    >
-                      <div className="relative bg-gray-800 px-4 py-3">
-                        {votou && (
-                          <div
-                            className="absolute inset-0 bg-blue-500/20"
-                            style={{ width: `${pct}%` }}
-                          />
-                        )}
-                        <div className="relative flex justify-between items-center">
-                          <span className="text-gray-200 text-sm">
-                            {op.opcao}
-                          </span>
-                          {votou && (
-                            <span className="text-blue-400 font-bold text-sm">
-                              {pct}%
-                            </span>
+                        {/* Foto */}
+                        <div
+                          className="rounded-full overflow-hidden border-2 flex-shrink-0"
+                          style={{
+                            width: 40,
+                            height: 40,
+                            borderColor: selecionada ? "#60a5fa" : "#374151",
+                          }}
+                        >
+                          {jogador?.foto_url ? (
+                            <img
+                              src={jogador.foto_url}
+                              alt={jogador.nome}
+                              style={{
+                                width: 40,
+                                height: 40,
+                                objectFit: "cover",
+                                display: "block",
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gray-700 flex items-center justify-center text-white font-bold">
+                              {op.opcao.charAt(0)}
+                            </div>
                           )}
                         </div>
-                      </div>
-                    </button>
-                  );
-                })}
+
+                        {/* Nome */}
+                        <span className="text-white text-sm font-medium flex-1 text-left">
+                          {op.opcao}
+                        </span>
+
+                        {/* Resultado após votar */}
+                        {votou && (
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <div className="w-16 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-blue-500 rounded-full transition-all"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <span className="text-blue-400 font-bold text-xs w-8 text-right">
+                              {pct}%
+                            </span>
+                          </div>
+                        )}
+
+                        {selecionada && (
+                          <span className="text-blue-400 text-sm flex-shrink-0">
+                            ✓
+                          </span>
+                        )}
+                      </button>
+                    ) : (
+                      <button
+                        key={op.id}
+                        onClick={() =>
+                          !jaVotouETrocou
+                            ? handleVotar(enquete.id, op.id)
+                            : null
+                        }
+                        disabled={!!jaVotouETrocou}
+                        className={`w-full text-left rounded-xl overflow-hidden transition-all ${
+                          selecionada
+                            ? "ring-2 ring-blue-400"
+                            : !jaVotouETrocou
+                              ? "hover:ring-2 hover:ring-blue-500/50 cursor-pointer"
+                              : "cursor-default"
+                        }`}
+                      >
+                        <div className="relative bg-gray-800 px-4 py-3">
+                          {votou && (
+                            <div
+                              className="absolute inset-0 bg-blue-500/20"
+                              style={{ width: `${pct}%` }}
+                            />
+                          )}
+                          <div className="relative flex justify-between items-center">
+                            <span className="text-gray-200 text-sm">
+                              {op.opcao}
+                            </span>
+                            {votou && (
+                              <span className="text-blue-400 font-bold text-sm">
+                                {pct}%
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
               </div>
 
               <div className="mt-3 text-center">

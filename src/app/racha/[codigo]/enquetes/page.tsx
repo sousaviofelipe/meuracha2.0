@@ -147,85 +147,89 @@ export default function EnquetesPublicoPage() {
                 <div className={`flex flex-col gap-2 ${isJogador ? "" : ""}`}>
                   {isJogador ? (
                     // Layout especial para jogadores — grid com foto
-                    <div className="grid grid-cols-2 gap-2">
-                      {e.opcoes?.map((op) => {
-                        const pct =
-                          total > 0 ? Math.round((op.votos / total) * 100) : 0;
-                        const selecionada = votouNessa === op.id;
-                        const jogador = (op as any).jogador;
+                    <div className="flex flex-col gap-2">
+                      {[...(e.opcoes ?? [])]
+                        .sort((a, b) => (votouNessa ? b.votos - a.votos : 0))
+                        .map((op) => {
+                          const pct =
+                            total > 0
+                              ? Math.round((op.votos / total) * 100)
+                              : 0;
+                          const selecionada = votouNessa === op.id;
+                          const jogador = (op as any).jogador;
 
-                        return (
-                          <button
-                            key={op.id}
-                            onClick={() =>
-                              podeVotar ? handleVotar(e.id, op.id) : null
-                            }
-                            disabled={!podeVotar && !selecionada}
-                            className={`relative flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
-                              selecionada
-                                ? "border-blue-400 bg-blue-500/20"
-                                : podeVotar
-                                  ? "border-gray-700 bg-gray-800 hover:border-blue-500/50 cursor-pointer"
-                                  : "border-gray-700 bg-gray-800 opacity-70 cursor-default"
-                            }`}
-                          >
-                            {/* Foto */}
-                            <div
-                              className="rounded-full overflow-hidden border-2 flex-shrink-0"
-                              style={{
-                                width: 56,
-                                height: 56,
-                                borderColor: selecionada
-                                  ? "#60a5fa"
-                                  : "#374151",
-                              }}
+                          return (
+                            <button
+                              key={op.id}
+                              onClick={() =>
+                                podeVotar ? handleVotar(e.id, op.id) : null
+                              }
+                              disabled={!podeVotar && !selecionada}
+                              className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl border transition-all ${
+                                selecionada
+                                  ? "border-blue-400 bg-blue-500/20"
+                                  : podeVotar
+                                    ? "border-gray-700 bg-gray-800 hover:border-blue-500/50 cursor-pointer"
+                                    : "border-gray-700 bg-gray-800 opacity-70 cursor-default"
+                              }`}
                             >
-                              {jogador?.foto_url ? (
-                                <img
-                                  src={jogador.foto_url}
-                                  alt={jogador.nome}
-                                  style={{
-                                    width: 56,
-                                    height: 56,
-                                    objectFit: "cover",
-                                    display: "block",
-                                  }}
-                                />
-                              ) : (
-                                <div className="w-full h-full bg-gray-700 flex items-center justify-center text-white font-bold text-lg">
-                                  {op.opcao.charAt(0)}
-                                </div>
-                              )}
-                            </div>
-                            <span className="text-white text-sm font-medium text-center">
-                              {op.opcao}
-                            </span>
-                            {votouNessa && (
-                              <div className="w-full">
-                                <div className="flex justify-between text-xs mb-1">
-                                  <span className="text-gray-400">
-                                    {op.votos} votos
-                                  </span>
-                                  <span className="text-blue-400 font-bold">
+                              {/* Foto */}
+                              <div
+                                className="rounded-full overflow-hidden border-2 flex-shrink-0"
+                                style={{
+                                  width: 40,
+                                  height: 40,
+                                  borderColor: selecionada
+                                    ? "#60a5fa"
+                                    : "#374151",
+                                }}
+                              >
+                                {jogador?.foto_url ? (
+                                  <img
+                                    src={jogador.foto_url}
+                                    alt={jogador.nome}
+                                    style={{
+                                      width: 40,
+                                      height: 40,
+                                      objectFit: "cover",
+                                      display: "block",
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-gray-700 flex items-center justify-center text-white font-bold">
+                                    {op.opcao.charAt(0)}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Nome */}
+                              <span className="text-white text-sm font-medium flex-1 text-left">
+                                {op.opcao}
+                              </span>
+
+                              {/* Resultado */}
+                              {votouNessa && (
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <div className="w-16 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full bg-blue-500 rounded-full"
+                                      style={{ width: `${pct}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-blue-400 font-bold text-xs w-8 text-right">
                                     {pct}%
                                   </span>
                                 </div>
-                                <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
-                                  <div
-                                    className="h-full bg-blue-500 rounded-full"
-                                    style={{ width: `${pct}%` }}
-                                  />
-                                </div>
-                              </div>
-                            )}
-                            {selecionada && (
-                              <span className="absolute top-2 right-2 text-blue-400 text-sm">
-                                ✓
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })}
+                              )}
+
+                              {selecionada && (
+                                <span className="text-blue-400 text-sm flex-shrink-0">
+                                  ✓
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
                     </div>
                   ) : (
                     // Layout normal para texto

@@ -190,41 +190,43 @@ export default function EnquetesPage() {
                 </div>
 
                 <div className="flex flex-col gap-2 mb-4">
-                  {e.opcoes?.map((op) => {
-                    const pct =
-                      total > 0 ? Math.round((op.votos / total) * 100) : 0;
-                    return (
-                      <div key={op.id}>
-                        <div className="flex items-center gap-2 mb-1">
-                          {e.tipo === "jogador" &&
-                            (op as any).jogador?.foto_url && (
-                              <img
-                                src={(op as any).jogador.foto_url}
-                                alt=""
-                                style={{
-                                  width: 20,
-                                  height: 20,
-                                  objectFit: "cover",
-                                  borderRadius: "50%",
-                                }}
-                              />
-                            )}
-                          <span className="text-gray-300 text-sm flex-1">
-                            {op.opcao}
-                          </span>
-                          <span className="text-blue-400 font-bold text-sm">
-                            {op.votos} ({pct}%)
-                          </span>
+                  {[...(e.opcoes ?? [])]
+                    .sort((a, b) => b.votos - a.votos)
+                    .map((op) => {
+                      const pct =
+                        total > 0 ? Math.round((op.votos / total) * 100) : 0;
+                      return (
+                        <div key={op.id}>
+                          <div className="flex items-center gap-2 mb-1">
+                            {e.tipo === "jogador" &&
+                              (op as any).jogador?.foto_url && (
+                                <img
+                                  src={(op as any).jogador.foto_url}
+                                  alt=""
+                                  style={{
+                                    width: 20,
+                                    height: 20,
+                                    objectFit: "cover",
+                                    borderRadius: "50%",
+                                  }}
+                                />
+                              )}
+                            <span className="text-gray-300 text-sm flex-1">
+                              {op.opcao}
+                            </span>
+                            <span className="text-blue-400 font-bold text-sm">
+                              {op.votos} ({pct}%)
+                            </span>
+                          </div>
+                          <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-blue-500 rounded-full transition-all"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
                         </div>
-                        <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-blue-500 rounded-full transition-all"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
                 </div>
 
                 <div className="flex gap-2">
