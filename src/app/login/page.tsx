@@ -7,6 +7,7 @@ import { criarRacha, getRachaPorAdmin } from "@/lib/services/racha.service";
 import { dbValidarConvite, dbUsarConvite } from "@/lib/db/convites.db";
 import { getSupabase } from "@/lib/db/supabase";
 import { Racha } from "@/types";
+import Link from "next/link";
 
 const WHATSAPP_NUMERO = "5583986177733";
 const WHATSAPP_MENSAGEM = encodeURIComponent(
