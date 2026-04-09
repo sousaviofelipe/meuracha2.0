@@ -371,6 +371,15 @@ export default function LoginPage() {
           )}
         </div>
       </div>
+      {/* Link instalar */}
+      <div className="text-center">
+        <Link
+          href="/instalar"
+          className="text-gray-600 hover:text-gray-400 text-xs transition-colors"
+        >
+          📲 Como instalar o app?
+        </Link>
+      </div>
     </main>
   );
 }
