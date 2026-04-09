@@ -385,13 +385,8 @@ export default function FichaTecnicaPage() {
 
                   {/* Card do evento */}
                   <div
-                    className={`flex-1 border rounded-xl px-3 py-2.5 flex items-center gap-3 transition-colors ${
-                      isTimeA
-                        ? "bg-green-500/10 border-green-500/30 group-hover:border-green-500/60"
-                        : "bg-orange-500/10 border-orange-500/30 group-hover:border-orange-500/60"
-                    }`}
+                    className={`flex-1 bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 flex items-center gap-3 group-hover:border-gray-700 transition-colors ${!isTimeA ? "flex-row-reverse" : ""}`}
                   >
-                    {" "}
                     {/* Foto */}
                     <div
                       className="rounded-full overflow-hidden flex-shrink-0"
@@ -414,12 +409,17 @@ export default function FichaTecnicaPage() {
                         </div>
                       )}
                     </div>
+
                     {/* Info */}
-                    <div className="flex-1 min-w-0">
+                    <div
+                      className={`flex-1 min-w-0 ${!isTimeA ? "text-right" : ""}`}
+                    >
                       <p className="text-white text-sm font-bold truncate">
                         {j?.nome ?? "—"}
                       </p>
-                      <div className="flex items-center gap-2">
+                      <div
+                        className={`flex items-center gap-2 ${!isTimeA ? "flex-row-reverse" : ""}`}
+                      >
                         <span className={`text-xs font-medium ${cfg.cor}`}>
                           {cfg.label}
                         </span>
@@ -431,6 +431,7 @@ export default function FichaTecnicaPage() {
                         </span>
                       </div>
                     </div>
+
                     {/* Remover */}
                     <button
                       onClick={() => handleRemoverEvento(e)}

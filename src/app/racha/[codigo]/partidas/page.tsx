@@ -11,10 +11,30 @@ import {
 import { Partida } from "@/types";
 
 const TIPO_CONFIG = {
-  gol: { emoji: "⚽", label: "Gols" },
-  assistencia: { emoji: "🎯", label: "Assistências" },
-  cartao_amarelo: { emoji: "🟨", label: "Amarelos" },
-  cartao_vermelho: { emoji: "🟥", label: "Vermelhos" },
+  gol: {
+    emoji: "⚽",
+    label: "Gol",
+    cor: "text-green-400",
+    bg: "bg-green-500/20",
+  },
+  assistencia: {
+    emoji: "🎯",
+    label: "Assistência",
+    cor: "text-blue-400",
+    bg: "bg-blue-500/20",
+  },
+  cartao_amarelo: {
+    emoji: "🟨",
+    label: "Amarelo",
+    cor: "text-yellow-400",
+    bg: "bg-yellow-500/20",
+  },
+  cartao_vermelho: {
+    emoji: "🟥",
+    label: "Vermelho",
+    cor: "text-red-400",
+    bg: "bg-red-500/20",
+  },
 };
 
 export default function PartidasPublicoPage() {
@@ -25,6 +45,7 @@ export default function PartidasPublicoPage() {
   const [nomRacha, setNomRacha] = useState("");
   const [expandida, setExpandida] = useState<string | null>(null);
   const [eventos, setEventos] = useState<Record<string, any[]>>({});
+  const [carregandoEvento, setCarregandoEvento] = useState<string | null>(null);
 
   useEffect(() => {
     async function carregar() {
@@ -42,8 +63,15 @@ export default function PartidasPublicoPage() {
     if (expandida === id) return setExpandida(null);
     setExpandida(id);
     if (!eventos[id]) {
+      setCarregandoEvento(id);
       const e = await dbGetEventosPartidaPublico(id);
-      setEventos((prev) => ({ ...prev, [id]: e }));
+      const ordenados = [...e].sort(
+        (a, b) =>
+          (a.minuto ?? 0) - (b.minuto ?? 0) ||
+          new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime(),
+      );
+      setEventos((prev) => ({ ...prev, [id]: ordenados }));
+      setCarregandoEvento(null);
     }
   }
 
@@ -63,6 +91,7 @@ export default function PartidasPublicoPage() {
           </div>
         </div>
       </header>
+
       <main className="max-w-2xl mx-auto p-4 flex flex-col gap-3 pb-10">
         {loading ? (
           <div className="text-center py-16 text-green-400 animate-pulse">
@@ -70,130 +99,161 @@ export default function PartidasPublicoPage() {
           </div>
         ) : partidas.length === 0 ? (
           <div className="text-center py-16 text-gray-600">
-            Nenhuma partida encerrada
+            <p className="text-4xl mb-3">⚽</p>
+            <p>Nenhuma partida encerrada</p>
           </div>
         ) : (
           partidas.map((p) => {
-            const evs = eventos[p.id] ?? [];
             const aberta = expandida === p.id;
+            const evs = eventos[p.id] ?? [];
+            const carregando = carregandoEvento === p.id;
+
             return (
               <div
                 key={p.id}
                 className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden"
               >
+                {/* Header da partida — clicável */}
                 <button
                   onClick={() => togglePartida(p.id)}
                   className="w-full p-4 text-left"
                 >
+                  {/* Data e local */}
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-gray-500 text-xs">
                       {new Date(p.data + "T12:00:00").toLocaleDateString(
                         "pt-BR",
+                        {
+                          weekday: "short",
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        },
                       )}
                       {p.local ? ` • ${p.local}` : ""}
                     </span>
-                    <span className="ml-auto text-gray-600 text-xs">
+                    <span className="ml-auto text-gray-600 text-lg">
                       {aberta ? "▲" : "▼"}
                     </span>
                   </div>
-                  <div className="flex items-center justify-center gap-4">
-                    <span className="text-white font-bold flex-1 text-right truncate">
+
+                  {/* Placar */}
+                  <div className="flex items-center justify-center gap-3">
+                    <span className="text-white font-black text-base flex-1 text-right truncate">
                       {p.time_a}
                     </span>
-                    <div className="bg-gray-800 px-4 py-2 rounded-xl">
-                      <span className="text-green-400 font-black text-xl">
+                    <div className="bg-gray-800 px-4 py-2.5 rounded-xl min-w-[90px] text-center">
+                      <span className="text-green-400 font-black text-2xl">
                         {p.gols_time_a} x {p.gols_time_b}
                       </span>
                     </div>
-                    <span className="text-white font-bold flex-1 text-left truncate">
+                    <span className="text-white font-black text-base flex-1 text-left truncate">
                       {p.time_b}
                     </span>
                   </div>
                 </button>
 
+                {/* Linha do tempo — expandida */}
                 {aberta && (
-                  <div className="border-t border-gray-800 p-4 flex flex-col gap-3">
-                    {(
-                      [
-                        "gol",
-                        "assistencia",
-                        "cartao_amarelo",
-                        "cartao_vermelho",
-                      ] as const
-                    ).map((tipo) => {
-                      const lista = evs.filter((e: any) => e.tipo === tipo);
-                      if (lista.length === 0) return null;
-                      const cfg = TIPO_CONFIG[tipo];
-                      const listaA = lista.filter((e: any) => e.time === "A");
-                      const listaB = lista.filter((e: any) => e.time === "B");
-                      return (
-                        <div key={tipo}>
-                          <p className="text-gray-500 text-xs font-semibold mb-2">
-                            {cfg.emoji} {cfg.label}
-                          </p>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="flex flex-col gap-1">
-                              {listaA.map((e: any) => (
+                  <div className="border-t border-gray-800 p-4">
+                    {carregando ? (
+                      <div className="text-center py-6 text-green-400 animate-pulse text-sm">
+                        Carregando...
+                      </div>
+                    ) : evs.length === 0 ? (
+                      <div className="text-center py-6 text-gray-600 text-sm">
+                        Nenhum evento registrado
+                      </div>
+                    ) : (
+                      <div className="relative flex flex-col gap-0">
+                        {/* Linha vertical */}
+                        <div className="absolute left-[44px] top-3 bottom-3 w-px bg-gray-800" />
+
+                        {evs.map((e: any) => {
+                          const cfg =
+                            TIPO_CONFIG[e.tipo as keyof typeof TIPO_CONFIG];
+                          const isTimeA = e.time === "A";
+                          if (!cfg) return null;
+
+                          return (
+                            <div
+                              key={e.id}
+                              className="flex items-start gap-3 py-2"
+                            >
+                              {/* Minuto */}
+                              <div className="w-8 text-right flex-shrink-0 pt-2">
+                                <span className="text-gray-600 text-xs font-mono">
+                                  {e.minuto !== null && e.minuto !== undefined
+                                    ? `${e.minuto}'`
+                                    : "—"}
+                                </span>
+                              </div>
+
+                              {/* Ícone */}
+                              <div
+                                className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 z-10 mt-0.5 ${cfg.bg}`}
+                              >
+                                <span className="text-sm">{cfg.emoji}</span>
+                              </div>
+
+                              {/* Info */}
+                              <div
+                                className={`flex-1 bg-gray-800 rounded-xl px-3 py-2 flex items-center gap-3 ${!isTimeA ? "flex-row-reverse" : ""}`}
+                              >
+                                {/* Foto */}
                                 <div
-                                  key={e.id}
-                                  className="flex items-center gap-2"
+                                  className="rounded-full overflow-hidden flex-shrink-0"
+                                  style={{ width: 30, height: 30 }}
                                 >
-                                  <div className="w-5 h-5 rounded-full bg-gray-700 overflow-hidden flex-shrink-0">
-                                    {e.jogador?.foto_url ? (
-                                      <img
-                                        src={e.jogador.foto_url}
-                                        alt=""
-                                        style={{
-                                          width: 20,
-                                          height: 20,
-                                          objectFit: "cover",
-                                        }}
-                                      />
-                                    ) : (
-                                      <div className="w-full h-full flex items-center justify-center text-xs">
-                                        👤
-                                      </div>
-                                    )}
-                                  </div>
-                                  <span className="text-gray-300 text-xs truncate">
-                                    {e.jogador?.nome ?? "—"}
-                                  </span>
+                                  {e.jogador?.foto_url ? (
+                                    <img
+                                      src={e.jogador.foto_url}
+                                      alt={e.jogador.nome}
+                                      style={{
+                                        width: 30,
+                                        height: 30,
+                                        objectFit: "cover",
+                                        display: "block",
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full bg-gray-700 flex items-center justify-center text-white text-xs font-bold">
+                                      {e.jogador?.nome?.charAt(0) ?? "?"}
+                                    </div>
+                                  )}
                                 </div>
-                              ))}
-                            </div>
-                            <div className="flex flex-col gap-1">
-                              {listaB.map((e: any) => (
+
+                                {/* Nome e tipo */}
                                 <div
-                                  key={e.id}
-                                  className="flex items-center gap-2"
+                                  className={`flex-1 min-w-0 ${!isTimeA ? "text-right" : ""}`}
                                 >
-                                  <div className="w-5 h-5 rounded-full bg-gray-700 overflow-hidden flex-shrink-0">
-                                    {e.jogador?.foto_url ? (
-                                      <img
-                                        src={e.jogador.foto_url}
-                                        alt=""
-                                        style={{
-                                          width: 20,
-                                          height: 20,
-                                          objectFit: "cover",
-                                        }}
-                                      />
-                                    ) : (
-                                      <div className="w-full h-full flex items-center justify-center text-xs">
-                                        👤
-                                      </div>
-                                    )}
-                                  </div>
-                                  <span className="text-gray-300 text-xs truncate">
+                                  <p className="text-white text-sm font-bold truncate">
                                     {e.jogador?.nome ?? "—"}
-                                  </span>
+                                  </p>
+                                  <div
+                                    className={`flex items-center gap-1.5 ${!isTimeA ? "flex-row-reverse" : ""}`}
+                                  >
+                                    <span
+                                      className={`text-xs font-medium ${cfg.cor}`}
+                                    >
+                                      {cfg.label}
+                                    </span>
+                                    <span className="text-gray-600 text-xs">
+                                      •
+                                    </span>
+                                    <span
+                                      className={`text-xs font-bold ${isTimeA ? "text-green-400" : "text-orange-400"}`}
+                                    >
+                                      {isTimeA ? p.time_a : p.time_b}
+                                    </span>
+                                  </div>
                                 </div>
-                              ))}
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
