@@ -7,6 +7,9 @@ import {
   dbAdicionarEvento,
   dbRemoverEvento,
   dbAtualizarPlacar,
+  dbIniciarCronometro,
+  dbPausarCronometro,
+  dbResetarCronometro,
 } from "@/lib/db/partidas.db";
 import { Partida, EventoPartida, TipoEvento } from "@/types";
 
@@ -43,8 +46,24 @@ export async function adicionarEvento(
   jogadorId: string,
   tipo: TipoEvento,
   time: "A" | "B",
+  minuto?: number,
 ): Promise<EventoPartida> {
-  return dbAdicionarEvento(partidaId, jogadorId, tipo, time);
+  return dbAdicionarEvento(partidaId, jogadorId, tipo, time, minuto);
+}
+
+export async function iniciarCronometro(id: string): Promise<void> {
+  return dbIniciarCronometro(id);
+}
+
+export async function pausarCronometro(
+  id: string,
+  segundos: number,
+): Promise<void> {
+  return dbPausarCronometro(id, segundos);
+}
+
+export async function resetarCronometro(id: string): Promise<void> {
+  return dbResetarCronometro(id);
 }
 
 export async function removerEvento(id: string): Promise<void> {

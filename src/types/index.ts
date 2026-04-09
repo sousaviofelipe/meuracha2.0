@@ -25,6 +25,16 @@ export interface Jogador {
   criado_em: string;
 }
 
+export interface EventoPartida {
+  id: string;
+  partida_id: string;
+  jogador_id: string;
+  tipo: TipoEvento;
+  time?: "A" | "B";
+  minuto?: number;
+  criado_em: string;
+}
+
 export interface Partida {
   id: string;
   racha_id: string;
@@ -35,15 +45,8 @@ export interface Partida {
   gols_time_a: number;
   gols_time_b: number;
   encerrada: boolean;
-  criado_em: string;
-}
-
-export interface EventoPartida {
-  id: string;
-  partida_id: string;
-  jogador_id: string;
-  tipo: TipoEvento;
-  time?: "A" | "B";
+  cronometro_inicio?: string;
+  cronometro_pausado?: number;
   criado_em: string;
 }
 

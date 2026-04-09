@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { getUser } from "@/lib/services/auth.service";
 import { getRachaPorAdmin } from "@/lib/services/racha.service";
@@ -10,16 +10,47 @@ import {
   adicionarEvento,
   removerEvento,
   atualizarPlacar,
+  iniciarCronometro,
+  pausarCronometro,
+  resetarCronometro,
 } from "@/lib/services/partidas.service";
 import { getSupabase } from "@/lib/db/supabase";
 import { Partida, Jogador, EventoPartida, TipoEvento } from "@/types";
 
 const TIPO_CONFIG = {
-  gol: { label: "Gol", emoji: "⚽", cor: "text-green-400" },
-  assistencia: { label: "Assistência", emoji: "🎯", cor: "text-blue-400" },
-  cartao_amarelo: { label: "Amarelo", emoji: "🟨", cor: "text-yellow-400" },
-  cartao_vermelho: { label: "Vermelho", emoji: "🟥", cor: "text-red-400" },
+  gol: {
+    label: "Gol",
+    emoji: "⚽",
+    cor: "text-green-400",
+    bg: "bg-green-500/20",
+  },
+  assistencia: {
+    label: "Assistência",
+    emoji: "🎯",
+    cor: "text-blue-400",
+    bg: "bg-blue-500/20",
+  },
+  cartao_amarelo: {
+    label: "Amarelo",
+    emoji: "🟨",
+    cor: "text-yellow-400",
+    bg: "bg-yellow-500/20",
+  },
+  cartao_vermelho: {
+    label: "Vermelho",
+    emoji: "🟥",
+    cor: "text-red-400",
+    bg: "bg-red-500/20",
+  },
 };
+
+function formatarTempo(seg: number) {
+  const m = Math.floor(seg / 60)
+    .toString()
+    .padStart(2, "0");
+  const s = (seg % 60).toString().padStart(2, "0");
+  return `${m}:${s}`;
+}
 
 export default function FichaTecnicaPage() {
   const router = useRouter();
@@ -31,13 +62,18 @@ export default function FichaTecnicaPage() {
   const [eventos, setEventos] = useState<EventoPartida[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Modal evento
+  // Cronômetro
+  const [segundos, setSegundos] = useState(0);
+  const [rodando, setRodando] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Modal
   const [modalEvento, setModalEvento] = useState(false);
   const [tipoSelecionado, setTipoSelecionado] = useState<TipoEvento>("gol");
   const [jogadorSelecionado, setJogadorSelecionado] = useState("");
+  const [timeSelecionado, setTimeSelecionado] = useState<"A" | "B">("A");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
-  const [timeSelecionado, setTimeSelecionado] = useState<"A" | "B">("A");
 
   useEffect(() => {
     async function carregar() {
@@ -51,9 +87,19 @@ export default function FichaTecnicaPage() {
         .select("*")
         .eq("id", partidaId)
         .single();
-
       if (!p) return router.push("/admin/partidas");
       setPartida(p);
+
+      // Restaura cronômetro
+      let seg = p.cronometro_pausado ?? 0;
+      if (p.cronometro_inicio) {
+        const diff = Math.floor(
+          (Date.now() - new Date(p.cronometro_inicio).getTime()) / 1000,
+        );
+        seg = seg + diff;
+        setRodando(true);
+      }
+      setSegundos(seg);
 
       const [j, e] = await Promise.all([
         listarJogadores(r.id),
@@ -66,18 +112,84 @@ export default function FichaTecnicaPage() {
     carregar();
   }, []);
 
+  // Cronômetro tick
+  useEffect(() => {
+    if (rodando) {
+      intervalRef.current = setInterval(() => setSegundos((s) => s + 1), 1000);
+    } else {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [rodando]);
+
+  async function handleIniciar() {
+    if (!partida) return;
+    await iniciarCronometro(partida.id);
+    setPartida((prev) =>
+      prev
+        ? {
+            ...prev,
+            cronometro_inicio: new Date().toISOString(),
+            cronometro_pausado: segundos,
+          }
+        : prev,
+    );
+    setRodando(true);
+  }
+
+  async function handlePausar() {
+    if (!partida) return;
+    await pausarCronometro(partida.id, segundos);
+    setPartida((prev) =>
+      prev
+        ? {
+            ...prev,
+            cronometro_inicio: undefined,
+            cronometro_pausado: segundos,
+          }
+        : prev,
+    );
+    setRodando(false);
+  }
+
+  async function handleResetar() {
+    if (!partida || !confirm("Resetar o cronômetro?")) return;
+    await resetarCronometro(partida.id);
+    setSegundos(0);
+    setRodando(false);
+  }
+
   async function handleAdicionarEvento() {
     if (!jogadorSelecionado) return setErro("Selecione um jogador");
     if (!partida) return;
     setSalvando(true);
     setErro("");
     try {
+      const minuto = Math.floor(segundos / 60);
       await adicionarEvento(
         partidaId,
         jogadorSelecionado,
         tipoSelecionado,
         timeSelecionado,
+        minuto,
       );
+
+      // Atualiza placar automaticamente se for gol
+      if (tipoSelecionado === "gol") {
+        const novosGolsA =
+          partida.gols_time_a + (timeSelecionado === "A" ? 1 : 0);
+        const novosGolsB =
+          partida.gols_time_b + (timeSelecionado === "B" ? 1 : 0);
+        await atualizarPlacar(partida.id, novosGolsA, novosGolsB);
+        setPartida((prev) =>
+          prev
+            ? { ...prev, gols_time_a: novosGolsA, gols_time_b: novosGolsB }
+            : prev,
+        );
+      }
+
       const eventosAtualizados = await getEventosPartida(partidaId);
       setEventos(eventosAtualizados);
       setModalEvento(false);
@@ -89,24 +201,37 @@ export default function FichaTecnicaPage() {
     }
   }
 
-  async function handleRemoverEvento(id: string) {
+  async function handleRemoverEvento(evento: EventoPartida) {
     if (!confirm("Remover este evento?")) return;
-    await removerEvento(id);
-    setEventos((prev) => prev.filter((e) => e.id !== id));
-  }
-
-  async function handlePlacar(campo: "a" | "b", valor: number) {
     if (!partida) return;
-    const golsA = campo === "a" ? valor : partida.gols_time_a;
-    const golsB = campo === "b" ? valor : partida.gols_time_b;
-    await atualizarPlacar(partida.id, golsA, golsB);
-    setPartida((prev) =>
-      prev ? { ...prev, gols_time_a: golsA, gols_time_b: golsB } : prev,
-    );
+    await removerEvento(evento.id);
+
+    // Reverte placar se for gol
+    if (evento.tipo === "gol") {
+      const novosGolsA = Math.max(
+        0,
+        partida.gols_time_a - (evento.time === "A" ? 1 : 0),
+      );
+      const novosGolsB = Math.max(
+        0,
+        partida.gols_time_b - (evento.time === "B" ? 1 : 0),
+      );
+      await atualizarPlacar(partida.id, novosGolsA, novosGolsB);
+      setPartida((prev) =>
+        prev
+          ? { ...prev, gols_time_a: novosGolsA, gols_time_b: novosGolsB }
+          : prev,
+      );
+    }
+
+    setEventos((prev) => prev.filter((e) => e.id !== evento.id));
   }
 
-  const eventosPorTipo = (tipo: TipoEvento) =>
-    eventos.filter((e) => e.tipo === tipo);
+  const eventosOrdenados = [...eventos].sort(
+    (a, b) =>
+      (a.minuto ?? 0) - (b.minuto ?? 0) ||
+      new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime(),
+  );
 
   if (loading) {
     return (
@@ -117,7 +242,7 @@ export default function FichaTecnicaPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       {/* Header */}
       <div className="flex items-center gap-3">
         <button
@@ -126,7 +251,7 @@ export default function FichaTecnicaPage() {
         >
           ← Voltar
         </button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-xl font-black text-white">Ficha Técnica</h1>
           <p className="text-gray-400 text-sm">
             {partida &&
@@ -135,74 +260,71 @@ export default function FichaTecnicaPage() {
           </p>
         </div>
         {partida?.encerrada && (
-          <span className="ml-auto text-xs bg-gray-800 text-gray-500 px-3 py-1 rounded-full">
+          <span className="text-xs bg-gray-800 text-gray-500 px-3 py-1 rounded-full">
             Encerrada
           </span>
         )}
       </div>
 
       {/* Placar */}
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
         <div className="flex items-center justify-center gap-4">
           <div className="flex-1 text-right">
-            <p className="text-white font-bold text-lg truncate">
+            <p className="text-white font-black text-lg truncate">
               {partida?.time_a}
             </p>
-
-            <div className="flex items-center justify-end gap-2 mt-2">
-              <button
-                onClick={() =>
-                  handlePlacar(
-                    "a",
-                    Math.max(0, (partida?.gols_time_a ?? 0) - 1),
-                  )
-                }
-                className="w-7 h-7 rounded-lg bg-gray-800 hover:bg-gray-700 text-white text-sm transition-colors"
-              >
-                -
-              </button>
-              <button
-                onClick={() =>
-                  handlePlacar("a", (partida?.gols_time_a ?? 0) + 1)
-                }
-                className="w-7 h-7 rounded-lg bg-gray-800 hover:bg-gray-700 text-white text-sm transition-colors"
-              >
-                +
-              </button>
-            </div>
           </div>
-
-          <div className="bg-gray-800 px-6 py-3 rounded-2xl text-center">
+          <div className="bg-gray-800 px-6 py-3 rounded-2xl text-center min-w-[100px]">
             <span className="text-green-400 font-black text-3xl">
               {partida?.gols_time_a} x {partida?.gols_time_b}
             </span>
           </div>
-
           <div className="flex-1 text-left">
-            <p className="text-white font-bold text-lg truncate">
+            <p className="text-white font-black text-lg truncate">
               {partida?.time_b}
             </p>
-            <div className="flex items-center justify-start gap-2 mt-2">
+          </div>
+        </div>
+      </div>
+
+      {/* Cronômetro */}
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span
+              className={`text-3xl font-black font-mono ${rodando ? "text-green-400" : "text-white"}`}
+            >
+              {formatarTempo(segundos)}
+            </span>
+            {rodando && (
+              <span className="flex items-center gap-1 text-green-400 text-xs">
+                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                ao vivo
+              </span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            {!rodando ? (
               <button
-                onClick={() =>
-                  handlePlacar(
-                    "b",
-                    Math.max(0, (partida?.gols_time_b ?? 0) - 1),
-                  )
-                }
-                className="w-7 h-7 rounded-lg bg-gray-800 hover:bg-gray-700 text-white text-sm transition-colors"
+                onClick={handleIniciar}
+                className="bg-green-500 hover:bg-green-400 text-black font-bold px-4 py-2 rounded-xl text-sm transition-colors"
               >
-                -
+                ▶ Iniciar
               </button>
+            ) : (
               <button
-                onClick={() =>
-                  handlePlacar("b", (partida?.gols_time_b ?? 0) + 1)
-                }
-                className="w-7 h-7 rounded-lg bg-gray-800 hover:bg-gray-700 text-white text-sm transition-colors"
+                onClick={handlePausar}
+                className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold px-4 py-2 rounded-xl text-sm transition-colors"
               >
-                +
+                ⏸ Pausar
               </button>
-            </div>
+            )}
+            <button
+              onClick={handleResetar}
+              className="bg-gray-800 hover:bg-gray-700 text-gray-400 font-bold px-4 py-2 rounded-xl text-sm transition-colors"
+            >
+              ↺
+            </button>
           </div>
         </div>
       </div>
@@ -221,147 +343,108 @@ export default function FichaTecnicaPage() {
         + Adicionar Evento
       </button>
 
-      {/* Eventos por tipo */}
-      {(
-        [
-          "gol",
-          "assistencia",
-          "cartao_amarelo",
-          "cartao_vermelho",
-        ] as TipoEvento[]
-      ).map((tipo) => {
-        const lista = eventosPorTipo(tipo);
-        const cfg = TIPO_CONFIG[tipo];
-        return (
-          <div
-            key={tipo}
-            className="bg-gray-900 border border-gray-800 rounded-2xl p-4"
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <span>{cfg.emoji}</span>
-              <span className={`font-bold ${cfg.cor}`}>{cfg.label}s</span>
-              <span className="ml-auto text-gray-500 text-sm">
-                {lista.length}
-              </span>
-            </div>
-            {lista.length === 0 ? (
-              <p className="text-gray-600 text-sm text-center py-2">
-                Nenhum registro
-              </p>
-            ) : (
-              <div className="grid grid-cols-2 gap-3">
-                {/* Time A */}
-                <div>
-                  <p className="text-xs text-gray-500 font-semibold mb-2">
-                    {partida?.time_a}
-                  </p>
-                  <div className="flex flex-col gap-2">
-                    {lista.filter((e) => e.time === "A").length === 0 ? (
-                      <p className="text-gray-700 text-xs text-center">—</p>
-                    ) : (
-                      lista
-                        .filter((e) => e.time === "A")
-                        .map((e) => {
-                          const j = (e as any).jogador;
-                          return (
-                            <div
-                              key={e.id}
-                              className="flex items-center gap-2 bg-gray-800 rounded-xl px-2 py-1.5"
-                            >
-                              <div
-                                className="rounded-full bg-gray-700 overflow-hidden flex-shrink-0"
-                                style={{ width: 24, height: 24, minWidth: 24 }}
-                              >
-                                {j?.foto_url ? (
-                                  <img
-                                    src={j.foto_url}
-                                    alt={j.nome}
-                                    style={{
-                                      width: 24,
-                                      height: 24,
-                                      objectFit: "cover",
-                                    }}
-                                  />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-xs">
-                                    👤
-                                  </div>
-                                )}
-                              </div>
-                              <span className="text-white text-xs flex-1 truncate">
-                                {j?.nome ?? "—"}
-                              </span>
-                              <button
-                                onClick={() => handleRemoverEvento(e.id)}
-                                className="text-gray-600 hover:text-red-400 transition-colors text-xs"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          );
-                        })
-                    )}
-                  </div>
-                </div>
+      {/* Linha do tempo */}
+      <div className="flex flex-col gap-1">
+        <h2 className="text-gray-400 text-sm font-semibold mb-2">
+          Linha do tempo • {eventos.length} evento
+          {eventos.length !== 1 ? "s" : ""}
+        </h2>
 
-                {/* Time B */}
-                <div>
-                  <p className="text-xs text-gray-500 font-semibold mb-2">
-                    {partida?.time_b}
-                  </p>
-                  <div className="flex flex-col gap-2">
-                    {lista.filter((e) => e.time === "B").length === 0 ? (
-                      <p className="text-gray-700 text-xs text-center">—</p>
-                    ) : (
-                      lista
-                        .filter((e) => e.time === "B")
-                        .map((e) => {
-                          const j = (e as any).jogador;
-                          return (
-                            <div
-                              key={e.id}
-                              className="flex items-center gap-2 bg-gray-800 rounded-xl px-2 py-1.5"
-                            >
-                              <div
-                                className="rounded-full bg-gray-700 overflow-hidden flex-shrink-0"
-                                style={{ width: 24, height: 24, minWidth: 24 }}
-                              >
-                                {j?.foto_url ? (
-                                  <img
-                                    src={j.foto_url}
-                                    alt={j.nome}
-                                    style={{
-                                      width: 24,
-                                      height: 24,
-                                      objectFit: "cover",
-                                    }}
-                                  />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-xs">
-                                    👤
-                                  </div>
-                                )}
-                              </div>
-                              <span className="text-white text-xs flex-1 truncate">
-                                {j?.nome ?? "—"}
-                              </span>
-                              <button
-                                onClick={() => handleRemoverEvento(e.id)}
-                                className="text-gray-600 hover:text-red-400 text-xs"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          );
-                        })
-                    )}
+        {eventosOrdenados.length === 0 ? (
+          <div className="bg-gray-900 border border-dashed border-gray-800 rounded-2xl p-8 text-center text-gray-600">
+            <p className="text-2xl mb-2">📋</p>
+            <p className="text-sm">Nenhum evento registrado</p>
+          </div>
+        ) : (
+          <div className="relative flex flex-col gap-0">
+            {/* Linha vertical */}
+            <div className="absolute left-[52px] top-4 bottom-4 w-px bg-gradient-to-b from-green-500/30 to-orange-500/30" />
+
+            {eventosOrdenados.map((e, idx) => {
+              const j = (e as any).jogador;
+              const cfg = TIPO_CONFIG[e.tipo];
+              const isTimeA = e.time === "A";
+
+              return (
+                <div key={e.id} className="flex items-start gap-3 py-2 group">
+                  {/* Minuto */}
+                  <div className="w-10 text-right flex-shrink-0 pt-2.5">
+                    <span className="text-gray-500 text-xs font-mono">
+                      {e.minuto !== null && e.minuto !== undefined
+                        ? `${e.minuto}'`
+                        : "—"}
+                    </span>
+                  </div>
+
+                  {/* Ícone */}
+                  <div
+                    className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 z-10 mt-1 ${cfg.bg}`}
+                  >
+                    <span className="text-sm">{cfg.emoji}</span>
+                  </div>
+
+                  {/* Card do evento */}
+                  <div
+                    className={`flex-1 border rounded-xl px-3 py-2.5 flex items-center gap-3 transition-colors ${
+                      isTimeA
+                        ? "bg-green-500/10 border-green-500/30 group-hover:border-green-500/60"
+                        : "bg-orange-500/10 border-orange-500/30 group-hover:border-orange-500/60"
+                    }`}
+                  >
+                    {" "}
+                    {/* Foto */}
+                    <div
+                      className="rounded-full overflow-hidden flex-shrink-0"
+                      style={{ width: 32, height: 32 }}
+                    >
+                      {j?.foto_url ? (
+                        <img
+                          src={j.foto_url}
+                          alt={j.nome}
+                          style={{
+                            width: 32,
+                            height: 32,
+                            objectFit: "cover",
+                            display: "block",
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-800 flex items-center justify-center text-xs font-bold text-white">
+                          {j?.nome?.charAt(0) ?? "?"}
+                        </div>
+                      )}
+                    </div>
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm font-bold truncate">
+                        {j?.nome ?? "—"}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-medium ${cfg.cor}`}>
+                          {cfg.label}
+                        </span>
+                        <span className="text-gray-600 text-xs">•</span>
+                        <span
+                          className={`text-xs font-bold ${isTimeA ? "text-green-400" : "text-orange-400"}`}
+                        >
+                          {isTimeA ? partida?.time_a : partida?.time_b}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Remover */}
+                    <button
+                      onClick={() => handleRemoverEvento(e)}
+                      className="text-gray-700 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 text-sm flex-shrink-0"
+                    >
+                      ✕
+                    </button>
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })}
           </div>
-        );
-      })}
+        )}
+      </div>
 
       {/* Modal Evento */}
       {modalEvento && (
@@ -416,38 +499,77 @@ export default function FichaTecnicaPage() {
                   {partida?.time_b}
                 </button>
               </div>
+
+              {/* Jogador */}
+              <div className="flex flex-col gap-2 mt-3">
+                {" "}
+                <p className="text-gray-400 text-sm mb-2">
+                  Selecione o jogador
+                </p>
+                <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto">
+                  {jogadores.map((j) => (
+                    <button
+                      key={j.id}
+                      onClick={() => setJogadorSelecionado(j.id)}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors border ${
+                        jogadorSelecionado === j.id
+                          ? "bg-green-500/20 border-green-500/40 text-white"
+                          : "bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-700"
+                      }`}
+                    >
+                      <div
+                        className="rounded-full overflow-hidden flex-shrink-0"
+                        style={{ width: 32, height: 32 }}
+                      >
+                        {j.foto_url ? (
+                          <img
+                            src={j.foto_url}
+                            alt={j.nome}
+                            style={{
+                              width: 32,
+                              height: 32,
+                              objectFit: "cover",
+                              display: "block",
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-700 flex items-center justify-center text-white text-xs font-bold">
+                            {j.nome.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="text-sm font-medium">{j.nome}</p>
+                        <p className="text-xs opacity-60">{j.posicao}</p>
+                      </div>
+                      {jogadorSelecionado === j.id && (
+                        <span className="text-green-400">✓</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            {/* Jogador */}
-            <select
-              value={jogadorSelecionado}
-              onChange={(e) => setJogadorSelecionado(e.target.value)}
-              className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-500 transition-colors"
-            >
-              <option value="">Selecione o jogador</option>
-              {jogadores.map((j) => (
-                <option key={j.id} value={j.id}>
-                  {j.nome} — {j.posicao}
-                </option>
-              ))}
-            </select>
-
-            {erro && <p className="text-red-400 text-sm">{erro}</p>}
-
-            <div className="flex gap-3 mt-2">
-              <button
-                onClick={() => setModalEvento(false)}
-                className="flex-1 py-3 rounded-xl bg-gray-800 text-gray-400 hover:bg-gray-700 font-medium transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleAdicionarEvento}
-                disabled={salvando}
-                className="flex-1 py-3 rounded-xl bg-green-500 hover:bg-green-400 disabled:opacity-50 text-black font-bold transition-colors"
-              >
-                {salvando ? "Salvando..." : "Adicionar"}
-              </button>
+            <div className="p-5 border-t border-gray-800 flex flex-col gap-3">
+              {erro && <p className="text-red-400 text-sm">{erro}</p>}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setModalEvento(false)}
+                  className="flex-1 py-3 rounded-xl bg-gray-800 text-gray-400 hover:bg-gray-700 font-medium transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleAdicionarEvento}
+                  disabled={salvando}
+                  className="flex-1 py-3 rounded-xl bg-green-500 hover:bg-green-400 disabled:opacity-50 text-black font-bold transition-colors"
+                >
+                  {salvando
+                    ? "Salvando..."
+                    : `Registrar ${TIPO_CONFIG[tipoSelecionado].emoji}`}
+                </button>
+              </div>
             </div>
           </div>
         </div>

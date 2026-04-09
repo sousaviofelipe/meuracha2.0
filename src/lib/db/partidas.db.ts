@@ -55,14 +55,48 @@ export async function dbAdicionarEvento(
   jogadorId: string,
   tipo: TipoEvento,
   time: "A" | "B",
+  minuto?: number,
 ): Promise<EventoPartida> {
   const { data, error } = await getSupabase()
     .from("eventos_partida")
-    .insert({ partida_id: partidaId, jogador_id: jogadorId, tipo, time })
+    .insert({
+      partida_id: partidaId,
+      jogador_id: jogadorId,
+      tipo,
+      time,
+      minuto,
+    })
     .select()
     .single();
   if (error) throw new Error(error.message);
   return data;
+}
+
+export async function dbIniciarCronometro(id: string): Promise<void> {
+  const { error } = await getSupabase()
+    .from("partidas")
+    .update({ cronometro_inicio: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+export async function dbPausarCronometro(
+  id: string,
+  segundos: number,
+): Promise<void> {
+  const { error } = await getSupabase()
+    .from("partidas")
+    .update({ cronometro_inicio: null, cronometro_pausado: segundos })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+export async function dbResetarCronometro(id: string): Promise<void> {
+  const { error } = await getSupabase()
+    .from("partidas")
+    .update({ cronometro_inicio: null, cronometro_pausado: 0 })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
 }
 
 export async function dbRemoverEvento(id: string): Promise<void> {
