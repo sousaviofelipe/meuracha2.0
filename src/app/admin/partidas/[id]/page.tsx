@@ -366,10 +366,10 @@ export default function FichaTecnicaPage() {
               const isTimeA = e.time === "A";
 
               return (
-                <div key={e.id} className="flex items-start gap-3 py-2 group">
+                <div key={e.id} className="flex items-center gap-3 py-2 group">
                   {/* Minuto */}
-                  <div className="w-10 text-right flex-shrink-0 pt-2.5">
-                    <span className="text-gray-500 text-xs font-mono">
+                  <div className="w-6 text-right flex-shrink-0 flex items-center justify-end">
+                    <span className="text-gray-400 text-xs font-mono">
                       {e.minuto !== null && e.minuto !== undefined
                         ? `${e.minuto}'`
                         : "—"}
@@ -378,7 +378,7 @@ export default function FichaTecnicaPage() {
 
                   {/* Ícone */}
                   <div
-                    className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 z-10 mt-1 ${cfg.bg}`}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 ${cfg.bg}`}
                   >
                     <span className="text-sm">{cfg.emoji}</span>
                   </div>
