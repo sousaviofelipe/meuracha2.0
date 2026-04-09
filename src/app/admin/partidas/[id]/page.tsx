@@ -343,8 +343,8 @@ export default function FichaTecnicaPage() {
         + Adicionar Evento
       </button>
 
-      {/* Linha do tempo estilo SofaScore */}
-      <div className="flex flex-col gap-2">
+      {/* Linha do tempo */}
+      <div className="flex flex-col gap-1">
         <h2 className="text-gray-400 text-sm font-semibold mb-2">
           Linha do tempo • {eventos.length} evento
           {eventos.length !== 1 ? "s" : ""}
@@ -356,96 +356,89 @@ export default function FichaTecnicaPage() {
             <p className="text-sm">Nenhum evento registrado</p>
           </div>
         ) : (
-          <div className="relative flex flex-col gap-4">
-            {/* Linha central */}
-            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-700 -translate-x-1/2 z-0" />
-            {eventosOrdenados.map((e) => {
+          <div className="relative flex flex-col gap-0">
+            {/* Linha vertical */}
+            <div className="absolute left-[52px] top-4 bottom-4 w-px bg-gradient-to-b from-green-500/30 to-orange-500/30" />
+
+            {eventosOrdenados.map((e, idx) => {
               const j = (e as any).jogador;
               const cfg = TIPO_CONFIG[e.tipo];
               const isTimeA = e.time === "A";
 
               return (
-                <div
-                  key={e.id}
-                  className="grid grid-cols-[1fr_60px_1fr] items-center relative z-10"
-                >
-                  {/* ESQUERDA (TIME A) */}
-                  <div className="flex justify-end pr-3">
-                    {isTimeA && (
-                      <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/30 rounded-xl px-3 py-2.5 max-w-xs w-full group relative">
-                        {/* REMOVER */}
-                        <button
-                          onClick={() => handleRemoverEvento(e)}
-                          className="absolute -right-2 -top-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
-                        >
-                          ✕
-                        </button>
-
-                        <div className="flex-1 text-right">
-                          <p className="text-white text-sm font-bold truncate">
-                            {j?.nome}
-                          </p>
-                          <div className="flex justify-end gap-2 text-xs">
-                            <span className="text-green-400">{cfg.label}</span>
-                            <span className="text-gray-600">•</span>
-                            <span className="text-green-400 font-bold">
-                              {partida?.time_a}
-                            </span>
-                          </div>
-                        </div>
-
-                        <img
-                          src={j?.foto_url}
-                          className="w-8 h-8 rounded-full object-cover"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* CENTRO */}
-                  <div className="flex flex-col items-center">
+                <div key={e.id} className="flex items-start gap-3 py-2 group">
+                  {/* Minuto */}
+                  <div className="w-10 text-right flex-shrink-0 pt-2.5">
                     <span className="text-gray-500 text-xs font-mono">
-                      {e.minuto ?? "—"}'
+                      {e.minuto !== null && e.minuto !== undefined
+                        ? `${e.minuto}'`
+                        : "—"}
                     </span>
-
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center mt-1 ${cfg.bg}`}
-                    >
-                      {cfg.emoji}
-                    </div>
                   </div>
 
-                  {/* DIREITA (TIME B) */}
-                  <div className="flex justify-start pl-3">
-                    {!isTimeA && (
-                      <div className="flex items-center gap-3 bg-orange-500/10 border border-orange-500/30 rounded-xl px-3 py-2.5 max-w-xs w-full group relative">
-                        {/* REMOVER */}
-                        <button
-                          onClick={() => handleRemoverEvento(e)}
-                          className="absolute -left-2 -top-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
-                        >
-                          ✕
-                        </button>
+                  {/* Ícone */}
+                  <div
+                    className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 z-10 mt-1 ${cfg.bg}`}
+                  >
+                    <span className="text-sm">{cfg.emoji}</span>
+                  </div>
 
+                  {/* Card do evento */}
+                  <div
+                    className={`flex-1 bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 flex items-center gap-3 group-hover:border-gray-700 transition-colors ${!isTimeA ? "flex-row-reverse" : ""}`}
+                  >
+                    {/* Foto */}
+                    <div
+                      className="rounded-full overflow-hidden flex-shrink-0"
+                      style={{ width: 32, height: 32 }}
+                    >
+                      {j?.foto_url ? (
                         <img
-                          src={j?.foto_url}
-                          className="w-8 h-8 rounded-full object-cover"
+                          src={j.foto_url}
+                          alt={j.nome}
+                          style={{
+                            width: 32,
+                            height: 32,
+                            objectFit: "cover",
+                            display: "block",
+                          }}
                         />
-
-                        <div className="flex-1 text-left">
-                          <p className="text-white text-sm font-bold truncate">
-                            {j?.nome}
-                          </p>
-                          <div className="flex gap-2 text-xs">
-                            <span className="text-orange-400">{cfg.label}</span>
-                            <span className="text-gray-600">•</span>
-                            <span className="text-orange-400 font-bold">
-                              {partida?.time_b}
-                            </span>
-                          </div>
+                      ) : (
+                        <div className="w-full h-full bg-gray-800 flex items-center justify-center text-xs font-bold text-white">
+                          {j?.nome?.charAt(0) ?? "?"}
                         </div>
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div
+                      className={`flex-1 min-w-0 ${!isTimeA ? "text-right" : ""}`}
+                    >
+                      <p className="text-white text-sm font-bold truncate">
+                        {j?.nome ?? "—"}
+                      </p>
+                      <div
+                        className={`flex items-center gap-2 ${!isTimeA ? "flex-row-reverse" : ""}`}
+                      >
+                        <span className={`text-xs font-medium ${cfg.cor}`}>
+                          {cfg.label}
+                        </span>
+                        <span className="text-gray-600 text-xs">•</span>
+                        <span
+                          className={`text-xs font-bold ${isTimeA ? "text-green-400" : "text-orange-400"}`}
+                        >
+                          {isTimeA ? partida?.time_a : partida?.time_b}
+                        </span>
                       </div>
-                    )}
+                    </div>
+
+                    {/* Remover */}
+                    <button
+                      onClick={() => handleRemoverEvento(e)}
+                      className="text-gray-700 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 text-sm flex-shrink-0"
+                    >
+                      ✕
+                    </button>
                   </div>
                 </div>
               );
@@ -453,6 +446,7 @@ export default function FichaTecnicaPage() {
           </div>
         )}
       </div>
+
       {/* Modal Evento */}
       {modalEvento && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
