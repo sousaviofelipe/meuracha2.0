@@ -3,10 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import {
-  dbGetRachaPorCodigo,
-  dbGetEstatisticasPublico,
-} from "@/lib/db/publico.db";
+import { dbGetRachaPorCodigo } from "@/lib/db/publico.db";
 import { getSupabase } from "@/lib/db/supabase";
 import {
   getMesesRecentes,
@@ -71,6 +68,12 @@ export default function FinanceiroPublicoPage() {
     return atrasoB - atrasoA;
   });
 
+  const totalDevendo = jogadoresOrdenados.filter(
+    (j) => calcularAtraso(j.id, pagamentos, meses) > 0,
+  ).length;
+
+  const totalEmDia = jogadoresOrdenados.length - totalDevendo;
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
@@ -90,19 +93,32 @@ export default function FinanceiroPublicoPage() {
             ←
           </Link>
           <div>
-            <h1 className="text-white font-black">💰 Financeiro</h1>
+            <h1 className="text-white font-black">💸 Financeiro do Racha</h1>
             <p className="text-gray-500 text-xs">{racha?.nome}</p>
           </div>
         </div>
       </header>
 
       <main className="max-w-2xl mx-auto p-4 flex flex-col gap-4 pb-10">
-        {/* Card PIX */}
+        {/* RESUMO */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-gray-900 p-3 rounded-xl border border-gray-800 text-center">
+            <p className="text-green-400 text-lg font-black">{totalEmDia}</p>
+            <p className="text-xs text-gray-500">Em dia</p>
+          </div>
+          <div className="bg-gray-900 p-3 rounded-xl border border-gray-800 text-center">
+            <p className="text-red-400 text-lg font-black">{totalDevendo}</p>
+            <p className="text-xs text-gray-500">Devendo</p>
+          </div>
+        </div>
+
+        {/* PIX */}
         {racha?.pix_chave && (
           <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-4">
             <p className="text-green-400 font-bold mb-3">
               💳 Pagar mensalidade
             </p>
+
             <div className="flex flex-col gap-1 mb-3">
               {racha.pix_titular && (
                 <div className="flex justify-between">
@@ -112,6 +128,7 @@ export default function FinanceiroPublicoPage() {
                   </span>
                 </div>
               )}
+
               {racha.pix_banco && (
                 <div className="flex justify-between">
                   <span className="text-gray-400 text-sm">Banco</span>
@@ -120,6 +137,7 @@ export default function FinanceiroPublicoPage() {
                   </span>
                 </div>
               )}
+
               {racha.mensalidade > 0 && (
                 <div className="flex justify-between">
                   <span className="text-gray-400 text-sm">Valor</span>
@@ -128,6 +146,7 @@ export default function FinanceiroPublicoPage() {
                   </span>
                 </div>
               )}
+
               <div className="flex justify-between items-center mt-1">
                 <span className="text-gray-400 text-sm">Chave PIX</span>
                 <span className="text-white text-sm font-mono">
@@ -135,6 +154,7 @@ export default function FinanceiroPublicoPage() {
                 </span>
               </div>
             </div>
+
             <button
               onClick={handleCopiarPix}
               className={`w-full py-3 rounded-xl font-bold text-sm transition-colors ${
@@ -143,15 +163,17 @@ export default function FinanceiroPublicoPage() {
                   : "bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30"
               }`}
             >
-              {copiado ? "✅ Chave PIX copiada!" : "📋 Copiar chave PIX"}
+              {copiado ? "🔥 PIX COPIADO!" : "📋 Copiar chave PIX"}
             </button>
           </div>
         )}
 
-        {/* Lista jogadores */}
+        {/* JOGADORES */}
         <div className="flex flex-col gap-3">
-          {jogadoresOrdenados.map((j) => {
+          {jogadoresOrdenados.map((j, i) => {
             const atraso = calcularAtraso(j.id, pagamentos, meses);
+            const valorDevido = atraso * (racha?.mensalidade ?? 0);
+
             return (
               <div
                 key={j.id}
@@ -185,7 +207,35 @@ export default function FinanceiroPublicoPage() {
                       </div>
                     )}
                   </div>
-                  <span className="text-white font-bold flex-1">{j.nome}</span>
+
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-white font-bold">{j.nome}</span>
+
+                      {i === 0 && atraso > 0 && (
+                        <span className="text-[10px] bg-red-600 text-white px-2 py-0.5 rounded-full font-black">
+                          💀 CALOTEIRO MASTER
+                        </span>
+                      )}
+                      {i === 1 && atraso > 0 && (
+                        <span className="text-[10px] bg-gray-500 text-white px-2 py-0.5 rounded-full font-black">
+                          🏃 DEVENDO E CORRENDO
+                        </span>
+                      )}
+                      {i === 2 && atraso > 0 && (
+                        <span className="text-[10px] bg-orange-500 text-white px-2 py-0.5 rounded-full font-black">
+                          🤞 SÓ PROMESSA
+                        </span>
+                      )}
+                    </div>
+
+                    {atraso > 0 && racha?.mensalidade > 0 && (
+                      <p className="text-xs text-red-400 font-bold">
+                        Deve R$ {valorDevido.toFixed(2)}
+                      </p>
+                    )}
+                  </div>
+
                   {atraso === 0 && (
                     <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">
                       Em dia ✓
@@ -202,13 +252,16 @@ export default function FinanceiroPublicoPage() {
                     </span>
                   )}
                 </div>
+
                 <div className="grid grid-cols-3 gap-2">
                   {meses.map(({ mes, ano }) => {
                     const pag = getPagamento(j.id, mes, ano);
                     const pago = pag?.pago ?? false;
+
                     const hoje = new Date();
                     const mesAtual =
                       mes === hoje.getMonth() + 1 && ano === hoje.getFullYear();
+
                     return (
                       <div
                         key={`${mes}-${ano}`}
@@ -224,7 +277,9 @@ export default function FinanceiroPublicoPage() {
                           {MESES_NOMES[mes - 1].slice(0, 3)}
                         </span>
                         <span className="text-xs text-gray-500">{ano}</span>
-                        <span className="text-base">{pago ? "✅" : "❌"}</span>
+                        <span className="text-base">
+                          {pago ? "✅" : mesAtual ? "⏳" : "🚫"}
+                        </span>
                       </div>
                     );
                   })}

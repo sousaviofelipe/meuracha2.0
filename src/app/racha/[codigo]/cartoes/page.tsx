@@ -53,6 +53,7 @@ export default function CartoesPage() {
           </div>
         </div>
       </header>
+
       <main className="max-w-2xl mx-auto p-4 flex flex-col gap-3 pb-10">
         {loading ? (
           <div className="text-center py-16 text-green-400 animate-pulse">
@@ -68,11 +69,22 @@ export default function CartoesPage() {
               key={s.id}
               className="bg-gray-900 border border-gray-800 rounded-2xl px-4 py-3 flex items-center gap-3"
             >
+              {/* Posição */}
               <span
-                className={`text-base font-black w-6 ${i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-400" : i === 2 ? "text-orange-400" : "text-gray-600"}`}
+                className={`text-base font-black w-6 ${
+                  i === 0
+                    ? "text-yellow-400"
+                    : i === 1
+                      ? "text-gray-400"
+                      : i === 2
+                        ? "text-orange-400"
+                        : "text-gray-600"
+                }`}
               >
                 {i + 1}
               </span>
+
+              {/* Foto */}
               <div className="w-10 h-10 rounded-full bg-gray-800 overflow-hidden flex-shrink-0">
                 {(s.jogador as any)?.foto_url ? (
                   <img
@@ -91,14 +103,37 @@ export default function CartoesPage() {
                   </div>
                 )}
               </div>
+
+              {/* Nome + Badge */}
               <div className="flex-1">
-                <p className="text-white font-bold">
-                  {(s.jogador as any)?.nome ?? "—"}
-                </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-white font-bold">
+                    {(s.jogador as any)?.nome ?? "—"}
+                  </p>
+
+                  {i === 0 && (
+                    <span className="text-[10px] bg-red-600 text-white px-2 py-0.5 rounded-full font-black">
+                      AÇOUGUEIRO
+                    </span>
+                  )}
+                  {i === 1 && (
+                    <span className="text-[10px] bg-gray-500 text-white px-2 py-0.5 rounded-full font-black">
+                      VARZEANO RAIZ
+                    </span>
+                  )}
+                  {i === 2 && (
+                    <span className="text-[10px] bg-orange-500 text-white px-2 py-0.5 rounded-full font-black">
+                      SEM FREIO
+                    </span>
+                  )}
+                </div>
+
                 <p className="text-gray-500 text-xs">
                   {(s.jogador as any)?.posicao}
                 </p>
               </div>
+
+              {/* Cartões */}
               <div className="flex gap-3">
                 <span className="text-yellow-400 font-black">
                   🟨 {s.cartoes_amarelos}

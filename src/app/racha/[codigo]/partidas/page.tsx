@@ -167,7 +167,7 @@ export default function PartidasPublicoPage() {
                     ) : (
                       <div className="relative flex flex-col gap-0">
                         {/* Linha vertical */}
-                        <div className="absolute left-[44px] top-3 bottom-3 w-px bg-gray-800" />
+                        <div className="absolute left-[52px] top-4 bottom-4 w-px bg-gradient-to-b from-green-500/30 to-orange-500/30" />
 
                         {evs.map((e: any) => {
                           const cfg =
@@ -178,11 +178,11 @@ export default function PartidasPublicoPage() {
                           return (
                             <div
                               key={e.id}
-                              className="flex items-start gap-3 py-2"
+                              className="flex items-center gap-3 py-2"
                             >
                               {/* Minuto */}
-                              <div className="w-8 text-right flex-shrink-0 pt-2">
-                                <span className="text-gray-600 text-xs font-mono">
+                              <div className="w-6 flex items-center justify-end flex-shrink-0">
+                                <span className="text-gray-400 text-xs font-mono">
                                   {e.minuto !== null && e.minuto !== undefined
                                     ? `${e.minuto}'`
                                     : "—"}
@@ -191,14 +191,20 @@ export default function PartidasPublicoPage() {
 
                               {/* Ícone */}
                               <div
-                                className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 z-10 mt-0.5 ${cfg.bg}`}
+                                className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 ${cfg.bg}`}
                               >
                                 <span className="text-sm">{cfg.emoji}</span>
                               </div>
 
-                              {/* Info */}
+                              {/* Card do evento */}
                               <div
-                                className={`flex-1 bg-gray-800 rounded-xl px-3 py-2 flex items-center gap-3 ${!isTimeA ? "flex-row-reverse" : ""}`}
+                                className={`flex-1 border rounded-xl px-3 py-2.5 flex items-center gap-3 transition-all
+${
+  isTimeA
+    ? "bg-green-500/10 border-green-500/30"
+    : "bg-orange-500/10 border-orange-500/30"
+}
+${!isTimeA ? "flex-row-reverse" : ""}`}
                               >
                                 {/* Foto */}
                                 <div
@@ -223,26 +229,30 @@ export default function PartidasPublicoPage() {
                                   )}
                                 </div>
 
-                                {/* Nome e tipo */}
+                                {/* Info */}
                                 <div
                                   className={`flex-1 min-w-0 ${!isTimeA ? "text-right" : ""}`}
                                 >
-                                  <p className="text-white text-sm font-bold truncate">
+                                  <p className="text-white text-sm font-semibold truncate">
                                     {e.jogador?.nome ?? "—"}
                                   </p>
                                   <div
-                                    className={`flex items-center gap-1.5 ${!isTimeA ? "flex-row-reverse" : ""}`}
+                                    className={`flex items-center gap-2 ${!isTimeA ? "flex-row-reverse" : ""}`}
                                   >
                                     <span
                                       className={`text-xs font-medium ${cfg.cor}`}
                                     >
                                       {cfg.label}
                                     </span>
-                                    <span className="text-gray-600 text-xs">
+                                    <span className="text-gray-500 text-xs">
                                       •
                                     </span>
                                     <span
-                                      className={`text-xs font-bold ${isTimeA ? "text-green-400" : "text-orange-400"}`}
+                                      className={`text-xs font-bold ${
+                                        isTimeA
+                                          ? "text-green-400"
+                                          : "text-orange-400"
+                                      }`}
                                     >
                                       {isTimeA ? p.time_a : p.time_b}
                                     </span>
