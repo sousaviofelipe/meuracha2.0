@@ -385,7 +385,13 @@ export default function FichaTecnicaPage() {
 
                   {/* Card do evento */}
                   <div
-                    className={`flex-1 bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 flex items-center gap-3 group-hover:border-gray-700 transition-colors ${!isTimeA ? "flex-row-reverse" : ""}`}
+                    className={`flex-1 border rounded-xl px-3 py-2.5 flex items-center gap-3 transition-all
+${
+  isTimeA
+    ? "bg-green-500/10 border-green-500/30 group-hover:bg-green-500/20"
+    : "bg-orange-500/10 border-orange-500/30 group-hover:bg-orange-500/20"
+}
+${!isTimeA ? "flex-row-reverse" : ""}`}
                   >
                     {/* Foto */}
                     <div
@@ -435,7 +441,7 @@ export default function FichaTecnicaPage() {
                     {/* Remover */}
                     <button
                       onClick={() => handleRemoverEvento(e)}
-                      className="text-gray-700 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 text-sm flex-shrink-0"
+                      className="text-gray-500 hover:text-red-400 transition-colors text-sm flex-shrink-0"
                     >
                       ✕
                     </button>
