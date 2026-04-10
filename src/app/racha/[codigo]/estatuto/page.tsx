@@ -1,35 +1,35 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
-import Link from 'next/link'
-import { dbGetRachaPorCodigo } from '@/lib/db/publico.db'
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import { dbGetRachaPorCodigo } from "@/lib/db/publico.db";
 
 export default function EstatutoPage() {
-  const params = useParams()
-  const codigo = params.codigo as string
-  const [estatutoUrl, setEstatutoUrl] = useState<string | null>(null)
-  const [nomRacha, setNomRacha] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [notFound, setNotFound] = useState(false)
+  const params = useParams();
+  const codigo = params.codigo as string;
+  const [estatutoUrl, setEstatutoUrl] = useState<string | null>(null);
+  const [nomRacha, setNomRacha] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     async function carregar() {
-      const r = await dbGetRachaPorCodigo(codigo)
-      if (!r) return setNotFound(true)
-      setNomRacha(r.nome)
-      setEstatutoUrl((r as any).estatuto_url ?? null)
-      setLoading(false)
+      const r = await dbGetRachaPorCodigo(codigo);
+      if (!r) return setNotFound(true);
+      setNomRacha(r.nome);
+      setEstatutoUrl((r as any).estatuto_url ?? null);
+      setLoading(false);
     }
-    carregar()
-  }, [codigo])
+    carregar();
+  }, [codigo]);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
         <div className="text-green-400 animate-pulse">Carregando...</div>
       </div>
-    )
+    );
   }
 
   return (
@@ -37,13 +37,18 @@ export default function EstatutoPage() {
       {/* Header */}
       <header className="bg-gray-900 border-b border-gray-800 px-4 py-4 sticky top-0 z-10 flex-shrink-0">
         <div className="max-w-4xl mx-auto flex items-center gap-3">
-          <Link href={`/racha/${codigo}`} className="text-gray-400 hover:text-white transition-colors">←</Link>
+          <Link
+            href={`/racha/${codigo}`}
+            className="text-gray-400 hover:text-white transition-colors"
+          >
+            ←
+          </Link>
           <div className="flex-1">
             <h1 className="text-white font-black">📄 Estatuto</h1>
             <p className="text-gray-500 text-xs">{nomRacha}</p>
           </div>
           {estatutoUrl && (
-            
+            <a
               href={estatutoUrl}
               download
               target="_blank"
@@ -61,7 +66,9 @@ export default function EstatutoPage() {
         {notFound || !estatutoUrl ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 p-4">
             <p className="text-6xl">📄</p>
-            <h2 className="text-white text-xl font-black">Estatuto não disponível</h2>
+            <h2 className="text-white text-xl font-black">
+              Estatuto não disponível
+            </h2>
             <p className="text-gray-400 text-center text-sm">
               O estatuto deste racha ainda não foi publicado.
             </p>
@@ -75,11 +82,14 @@ export default function EstatutoPage() {
         ) : (
           <>
             {/* Visualizador PDF — ocupa toda a tela */}
-            <div className="flex-1 w-full" style={{ minHeight: 'calc(100vh - 65px)' }}>
+            <div
+              className="flex-1 w-full"
+              style={{ minHeight: "calc(100vh - 65px)" }}
+            >
               <iframe
                 src={`${estatutoUrl}#toolbar=1&navpanes=0`}
                 className="w-full h-full"
-                style={{ minHeight: 'calc(100vh - 65px)', border: 'none' }}
+                style={{ minHeight: "calc(100vh - 65px)", border: "none" }}
                 title="Estatuto do Racha"
               />
             </div>
@@ -102,5 +112,5 @@ export default function EstatutoPage() {
         )}
       </main>
     </div>
-  )
+  );
 }
