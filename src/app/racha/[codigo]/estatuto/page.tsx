@@ -89,7 +89,7 @@ export default function EstatutoPage() {
               <p className="text-gray-500 text-xs text-center mb-3">
                 Problema para visualizar? Baixe o PDF diretamente.
               </p>
-              
+              <a
                 href={estatutoUrl}
                 target="_blank"
                 rel="noopener noreferrer"
