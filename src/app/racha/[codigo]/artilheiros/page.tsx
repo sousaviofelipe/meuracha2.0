@@ -126,7 +126,7 @@ export default function ArtilheirosPage() {
                     {/* MVP */}
                     {i === 0 && (
                       <span className="ml-2 text-[10px] bg-yellow-400 text-black px-2 py-0.5 rounded-full font-black">
-                        O PICA DAS PICAS
+                        MVP
                       </span>
                     )}
                   </p>

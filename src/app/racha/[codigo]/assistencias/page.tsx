@@ -128,7 +128,7 @@ export default function AssistenciasPage() {
                     {/* MVP */}
                     {i === 0 && (
                       <span className="text-[10px] bg-blue-400 text-black px-2 py-0.5 rounded-full font-black">
-                        Garçon
+                        🧠 GARÇOM
                       </span>
                     )}
                   </p>
