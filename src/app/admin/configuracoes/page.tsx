@@ -65,8 +65,8 @@ export default function ConfiguracoesPage() {
     if (!file || !racha) return;
     if (file.type !== "application/pdf")
       return setErroEstatuto("Apenas arquivos PDF são aceitos");
-    if (file.size > 10 * 1024 * 1024)
-      return setErroEstatuto("Arquivo muito grande. Máximo 10MB");
+    if (file.size > 100 * 1024 * 1024)
+      return setErroEstatuto("Arquivo muito grande. Máximo 50MB");
     setUploadandoEstatuto(true);
     setErroEstatuto("");
     setSucessoEstatuto(false);
@@ -281,6 +281,7 @@ export default function ConfiguracoesPage() {
           {salvandoPix ? "Salvando..." : "Salvar PIX e mensalidade"}
         </button>
       </div>
+
       {/* Card Estatuto */}
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 flex flex-col gap-5">
         <h2 className="text-white font-bold">📄 Estatuto do Racha</h2>
