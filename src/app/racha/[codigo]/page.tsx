@@ -703,15 +703,6 @@ export default function DashboardPublicoPage() {
             </div>
           </Link>
         )}
-        {/* Link instalar */}
-        <div className="text-center pt-2">
-          <Link
-            href="/instalar"
-            className="text-gray-600 hover:text-gray-400 text-xs transition-colors"
-          >
-            📲 Como instalar o app?
-          </Link>
-        </div>
 
         {/* Estatuto */}
         {estatutoUrl && (
@@ -728,6 +719,16 @@ export default function DashboardPublicoPage() {
             </div>
           </Link>
         )}
+
+        {/* Link instalar */}
+        <div className="text-center pt-2">
+          <Link
+            href="/instalar"
+            className="text-gray-600 hover:text-gray-400 text-xs transition-colors"
+          >
+            📲 Como instalar o app?
+          </Link>
+        </div>
       </main>
     </div>
   );
