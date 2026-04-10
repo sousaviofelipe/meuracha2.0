@@ -26,6 +26,7 @@ import {
 } from "@/types";
 
 export default function DashboardPublicoPage() {
+  const [estatutoUrl, setEstatutoUrl] = useState<string | null>(null);
   const [jogadoresFinanceiro, setJogadoresFinanceiro] = useState<any[]>([]);
   const [pagamentosPublico, setPagamentosPublico] = useState<any[]>([]);
   const [escalacao, setEscalacao] = useState<Escalacao | null>(null);
@@ -48,6 +49,8 @@ export default function DashboardPublicoPage() {
       const r = await dbGetRachaPorCodigo(codigo);
       if (!r) return setNotFound(true);
       setRacha(r);
+
+      setEstatutoUrl((r as any).estatuto_url ?? null);
 
       const [s, n, p, esc] = await Promise.all([
         dbGetEstatisticasPublico(r.id),
@@ -709,6 +712,22 @@ export default function DashboardPublicoPage() {
             📲 Como instalar o app?
           </Link>
         </div>
+
+        {/* Estatuto */}
+        {estatutoUrl && (
+          <Link href={`/racha/${codigo}/estatuto`}>
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 hover:border-gray-700 transition-colors cursor-pointer flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-2xl">📄</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-white font-bold">Estatuto do Racha</p>
+                <p className="text-gray-500 text-sm">Regras e regulamento</p>
+              </div>
+              <span className="text-gray-500 text-sm">→</span>
+            </div>
+          </Link>
+        )}
       </main>
     </div>
   );

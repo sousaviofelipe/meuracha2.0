@@ -107,3 +107,26 @@ export async function dbVerificarCodigoDisponivel(
     .single();
   return !data;
 }
+export async function dbAtualizarEstatuto(
+  id: string,
+  url: string,
+): Promise<void> {
+  const { error } = await getSupabase()
+    .from("rachas")
+    .update({ estatuto_url: url })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+export async function dbUploadEstatuto(
+  file: File,
+  rachaId: string,
+): Promise<string> {
+  const path = `${rachaId}/estatuto.pdf`;
+  const { error } = await getSupabase()
+    .storage.from("documentos")
+    .upload(path, file, { upsert: true, contentType: "application/pdf" });
+  if (error) throw new Error(error.message);
+  const { data } = getSupabase().storage.from("documentos").getPublicUrl(path);
+  return data.publicUrl;
+}

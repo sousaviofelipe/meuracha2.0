@@ -1,17 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { getUser } from "@/lib/services/auth.service";
 import { getRachaPorAdmin } from "@/lib/services/racha.service";
 import {
   dbAtualizarRacha,
   dbVerificarCodigoDisponivel,
+  dbUploadEstatuto,
+  dbAtualizarEstatuto,
 } from "@/lib/db/rachas.db";
 import { dbAtualizarFinanceiro } from "@/lib/db/financeiro.db";
 import { Racha } from "@/types";
 
 export default function ConfiguracoesPage() {
+  const [estatutoUrl, setEstatutoUrl] = useState("");
+  const [uploadandoEstatuto, setUploadandoEstatuto] = useState(false);
+  const [sucessoEstatuto, setSucessoEstatuto] = useState(false);
+  const [erroEstatuto, setErroEstatuto] = useState("");
+  const estatutoRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const [racha, setRacha] = useState<Racha | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,10 +54,34 @@ export default function ConfiguracoesPage() {
       setPixChave((r as any).pix_chave ?? "");
       setPixTitular((r as any).pix_titular ?? "");
       setPixBanco((r as any).pix_banco ?? "");
+      setEstatutoUrl((r as any).estatuto_url ?? "");
       setLoading(false);
     }
     carregar();
   }, []);
+
+  async function handleUploadEstatuto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !racha) return;
+    if (file.type !== "application/pdf")
+      return setErroEstatuto("Apenas arquivos PDF são aceitos");
+    if (file.size > 10 * 1024 * 1024)
+      return setErroEstatuto("Arquivo muito grande. Máximo 10MB");
+    setUploadandoEstatuto(true);
+    setErroEstatuto("");
+    setSucessoEstatuto(false);
+    try {
+      const url = await dbUploadEstatuto(file, racha.id);
+      await dbAtualizarEstatuto(racha.id, url);
+      setEstatutoUrl(url);
+      setSucessoEstatuto(true);
+      setTimeout(() => setSucessoEstatuto(false), 3000);
+    } catch (err: any) {
+      setErroEstatuto(err.message);
+    } finally {
+      setUploadandoEstatuto(false);
+    }
+  }
 
   async function handleSalvarRacha() {
     if (!nome.trim()) return setErro("Nome é obrigatório");
@@ -249,6 +280,59 @@ export default function ConfiguracoesPage() {
         >
           {salvandoPix ? "Salvando..." : "Salvar PIX e mensalidade"}
         </button>
+      </div>
+      {/* Card Estatuto */}
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 flex flex-col gap-5">
+        <h2 className="text-white font-bold">📄 Estatuto do Racha</h2>
+
+        {estatutoUrl && (
+          <div className="bg-gray-800 rounded-xl p-3 flex items-center gap-3">
+            <span className="text-red-400 text-2xl">📕</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm font-medium">Estatuto atual</p>
+              <p className="text-gray-500 text-xs truncate">{estatutoUrl}</p>
+            </div>
+
+            <a
+              href={estatutoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-green-400 hover:text-green-300 text-xs font-bold transition-colors"
+            >
+              Ver →
+            </a>
+          </div>
+        )}
+
+        <input
+          ref={estatutoRef}
+          type="file"
+          accept="application/pdf"
+          className="hidden"
+          onChange={handleUploadEstatuto}
+        />
+
+        <button
+          onClick={() => estatutoRef.current?.click()}
+          disabled={uploadandoEstatuto}
+          className="w-full py-3 rounded-xl border-2 border-dashed border-gray-700 hover:border-green-500 text-gray-400 hover:text-white font-medium text-sm transition-colors disabled:opacity-50"
+        >
+          {uploadandoEstatuto
+            ? "⏳ Enviando..."
+            : estatutoUrl
+              ? "🔄 Substituir PDF"
+              : "📤 Fazer upload do PDF"}
+        </button>
+
+        {erroEstatuto && <p className="text-red-400 text-sm">{erroEstatuto}</p>}
+        {sucessoEstatuto && (
+          <p className="text-green-400 text-sm">
+            ✅ Estatuto atualizado com sucesso!
+          </p>
+        )}
+        <p className="text-gray-600 text-xs">
+          Máximo 10MB. Apenas arquivos PDF.
+        </p>
       </div>
     </div>
   );
