@@ -332,7 +332,7 @@ export default function ConfiguracoesPage() {
           </p>
         )}
         <p className="text-gray-600 text-xs">
-          Máximo 10MB. Apenas arquivos PDF.
+          Máximo 50MB. Apenas arquivos PDF.
         </p>
       </div>
     </div>
