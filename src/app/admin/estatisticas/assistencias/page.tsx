@@ -79,11 +79,11 @@ export default function AdminAssistenciasPage() {
             // 🎨 destaque (igual público)
             const destaque =
               i === 0
-                ? "bg-blue-500/10 border-blue-500/40 shadow-[0_0_12px_rgba(59,130,246,0.25)]"
+                ? "bg-blue-500/10 border-blue-500/40"
                 : i === 1
-                  ? "bg-slate-300/10 border-slate-300/40 shadow-[0_0_10px_rgba(203,213,225,0.25)]"
+                  ? "bg-slate-300/10 border-slate-300/40"
                   : i === 2
-                    ? "bg-orange-500/10 border-orange-500/40 shadow-[0_0_10px_rgba(249,115,22,0.25)]"
+                    ? "bg-orange-500/10 border-orange-500/40"
                     : "bg-gray-900 border-gray-800";
 
             const corPosicao =
