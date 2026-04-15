@@ -79,7 +79,7 @@ export default function AdminAssistenciasPage() {
             // 🎨 destaque
             const destaque =
               i === 0
-                ? "bg-blue-500/10 border-blue-600/40"
+                ? "bg-blue-500/10 border-blue-500/40"
                 : i === 1
                   ? "bg-slate-300/10 border-slate-300/40"
                   : i === 2
