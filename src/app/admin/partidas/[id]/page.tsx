@@ -52,6 +52,41 @@ function formatarTempo(seg: number) {
   return `${m}:${s}`;
 }
 
+// Agrupa eventos: associa assistências ao gol correspondente
+function agruparEventos(eventos: EventoPartida[]) {
+  const resultado: Array<{
+    principal: EventoPartida;
+    assistencia?: EventoPartida;
+  }> = [];
+  const assistenciasUsadas = new Set<string>();
+
+  for (const e of eventos) {
+    if (e.tipo === "assistencia" && assistenciasUsadas.has(e.id)) continue;
+    if (e.tipo !== "gol") {
+      resultado.push({ principal: e });
+      continue;
+    }
+
+    // Procura assistência do mesmo time no mesmo minuto
+    const assist = eventos.find(
+      (x) =>
+        x.tipo === "assistencia" &&
+        x.time === e.time &&
+        x.minuto === e.minuto &&
+        !assistenciasUsadas.has(x.id),
+    );
+
+    if (assist) {
+      assistenciasUsadas.add(assist.id);
+      resultado.push({ principal: e, assistencia: assist });
+    } else {
+      resultado.push({ principal: e });
+    }
+  }
+
+  return resultado;
+}
+
 export default function FichaTecnicaPage() {
   const router = useRouter();
   const params = useParams();
@@ -71,9 +106,13 @@ export default function FichaTecnicaPage() {
   const [modalEvento, setModalEvento] = useState(false);
   const [tipoSelecionado, setTipoSelecionado] = useState<TipoEvento>("gol");
   const [jogadorSelecionado, setJogadorSelecionado] = useState("");
+  const [assistenteSelecionado, setAssistenteSelecionado] = useState(""); // "" = sem assistência
   const [timeSelecionado, setTimeSelecionado] = useState<"A" | "B">("A");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
+
+  // Controle da seção de assistência no modal
+  const [adicionarAssistencia, setAdicionarAssistencia] = useState(false);
 
   useEffect(() => {
     async function carregar() {
@@ -90,7 +129,6 @@ export default function FichaTecnicaPage() {
       if (!p) return router.push("/admin/partidas");
       setPartida(p);
 
-      // Restaura cronômetro
       let seg = p.cronometro_pausado ?? 0;
       if (p.cronometro_inicio) {
         const diff = Math.floor(
@@ -112,7 +150,6 @@ export default function FichaTecnicaPage() {
     carregar();
   }, []);
 
-  // Cronômetro tick
   useEffect(() => {
     if (rodando) {
       intervalRef.current = setInterval(() => setSegundos((s) => s + 1), 1000);
@@ -162,12 +199,17 @@ export default function FichaTecnicaPage() {
   }
 
   async function handleAdicionarEvento() {
-    if (!jogadorSelecionado) return setErro("Selecione um jogador");
+    if (!jogadorSelecionado) return setErro("Selecione o jogador");
+    if (adicionarAssistencia && !assistenteSelecionado)
+      return setErro("Selecione o jogador da assistência ou desmarque a opção");
     if (!partida) return;
     setSalvando(true);
     setErro("");
+
     try {
       const minuto = Math.floor(segundos / 60);
+
+      // Salva o evento principal
       await adicionarEvento(
         partidaId,
         jogadorSelecionado,
@@ -176,7 +218,22 @@ export default function FichaTecnicaPage() {
         minuto,
       );
 
-      // Atualiza placar automaticamente se for gol
+      // Se for gol com assistência, salva o evento de assistência no mesmo minuto
+      if (
+        tipoSelecionado === "gol" &&
+        adicionarAssistencia &&
+        assistenteSelecionado
+      ) {
+        await adicionarEvento(
+          partidaId,
+          assistenteSelecionado,
+          "assistencia",
+          timeSelecionado,
+          minuto,
+        );
+      }
+
+      // Atualiza placar se for gol
       if (tipoSelecionado === "gol") {
         const novosGolsA =
           partida.gols_time_a + (timeSelecionado === "A" ? 1 : 0);
@@ -194,6 +251,8 @@ export default function FichaTecnicaPage() {
       setEventos(eventosAtualizados);
       setModalEvento(false);
       setJogadorSelecionado("");
+      setAssistenteSelecionado("");
+      setAdicionarAssistencia(false);
     } catch (err: any) {
       setErro(err.message);
     } finally {
@@ -206,7 +265,6 @@ export default function FichaTecnicaPage() {
     if (!partida) return;
     await removerEvento(evento.id);
 
-    // Reverte placar se for gol
     if (evento.tipo === "gol") {
       const novosGolsA = Math.max(
         0,
@@ -227,11 +285,23 @@ export default function FichaTecnicaPage() {
     setEventos((prev) => prev.filter((e) => e.id !== evento.id));
   }
 
+  function abrirModal() {
+    setModalEvento(true);
+    setErro("");
+    setJogadorSelecionado("");
+    setAssistenteSelecionado("");
+    setTipoSelecionado("gol");
+    setTimeSelecionado("A");
+    setAdicionarAssistencia(false);
+  }
+
   const eventosOrdenados = [...eventos].sort(
     (a, b) =>
       (a.minuto ?? 0) - (b.minuto ?? 0) ||
       new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime(),
   );
+
+  const gruposEventos = agruparEventos(eventosOrdenados);
 
   if (loading) {
     return (
@@ -240,6 +310,9 @@ export default function FichaTecnicaPage() {
       </div>
     );
   }
+
+  // Jogadores do time selecionado (para assistência não ser o mesmo que marcou o gol)
+  const jogadoresDoTime = jogadores.filter((j) => j.id !== jogadorSelecionado);
 
   return (
     <div className="flex flex-col gap-5">
@@ -331,13 +404,7 @@ export default function FichaTecnicaPage() {
 
       {/* Botão adicionar evento */}
       <button
-        onClick={() => {
-          setModalEvento(true);
-          setErro("");
-          setJogadorSelecionado("");
-          setTipoSelecionado("gol");
-          setTimeSelecionado("A");
-        }}
+        onClick={abrirModal}
         className="w-full py-3 rounded-2xl bg-green-500 hover:bg-green-400 text-black font-bold transition-colors"
       >
         + Adicionar Evento
@@ -350,7 +417,7 @@ export default function FichaTecnicaPage() {
           {eventos.length !== 1 ? "s" : ""}
         </h2>
 
-        {eventosOrdenados.length === 0 ? (
+        {gruposEventos.length === 0 ? (
           <div className="bg-gray-900 border border-dashed border-gray-800 rounded-2xl p-8 text-center text-gray-600">
             <p className="text-2xl mb-2">📋</p>
             <p className="text-sm">Nenhum evento registrado</p>
@@ -360,15 +427,18 @@ export default function FichaTecnicaPage() {
             {/* Linha vertical */}
             <div className="absolute left-[52px] top-4 bottom-4 w-px bg-gradient-to-b from-green-500/30 to-orange-500/30" />
 
-            {eventosOrdenados.map((e, idx) => {
+            {gruposEventos.map(({ principal: e, assistencia }) => {
               const j = (e as any).jogador;
               const cfg = TIPO_CONFIG[e.tipo];
               const isTimeA = e.time === "A";
+              const assistenteJogador = assistencia
+                ? (assistencia as any).jogador
+                : null;
 
               return (
-                <div key={e.id} className="flex items-center gap-3 py-2 group">
+                <div key={e.id} className="flex items-start gap-3 py-2 group">
                   {/* Minuto */}
-                  <div className="w-6 text-right flex-shrink-0 flex items-center justify-end">
+                  <div className="w-6 text-right flex-shrink-0 pt-2.5">
                     <span className="text-gray-400 text-xs font-mono">
                       {e.minuto !== null && e.minuto !== undefined
                         ? `${e.minuto}'`
@@ -378,73 +448,124 @@ export default function FichaTecnicaPage() {
 
                   {/* Ícone */}
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 ${cfg.bg}`}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 mt-1 ${cfg.bg}`}
                   >
                     <span className="text-sm">{cfg.emoji}</span>
                   </div>
 
                   {/* Card do evento */}
                   <div
-                    className={`flex-1 border rounded-xl px-3 py-2.5 flex items-center gap-3 transition-all
-${
-  isTimeA
-    ? "bg-green-500/10 border-green-500/30 group-hover:bg-green-500/20"
-    : "bg-orange-500/10 border-orange-500/30 group-hover:bg-orange-500/20"
-}
-${!isTimeA ? "flex-row-reverse" : ""}`}
+                    className={`flex-1 border rounded-xl overflow-hidden transition-all
+                      ${
+                        isTimeA
+                          ? "bg-green-500/10 border-green-500/30 group-hover:bg-green-500/20"
+                          : "bg-orange-500/10 border-orange-500/30 group-hover:bg-orange-500/20"
+                      }`}
                   >
-                    {/* Foto */}
+                    {/* Linha principal: gol/evento */}
                     <div
-                      className="rounded-full overflow-hidden flex-shrink-0"
-                      style={{ width: 32, height: 32 }}
+                      className={`flex items-center gap-3 px-3 py-2.5 ${!isTimeA ? "flex-row-reverse" : ""}`}
                     >
-                      {j?.foto_url ? (
-                        <img
-                          src={j.foto_url}
-                          alt={j.nome}
-                          style={{
-                            width: 32,
-                            height: 32,
-                            objectFit: "cover",
-                            display: "block",
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gray-800 flex items-center justify-center text-xs font-bold text-white">
-                          {j?.nome?.charAt(0) ?? "?"}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div
-                      className={`flex-1 min-w-0 ${!isTimeA ? "text-right" : ""}`}
-                    >
-                      <p className="text-white text-sm font-bold truncate">
-                        {j?.nome ?? "—"}
-                      </p>
+                      {/* Foto */}
                       <div
-                        className={`flex items-center gap-2 ${!isTimeA ? "flex-row-reverse" : ""}`}
+                        className="rounded-full overflow-hidden flex-shrink-0"
+                        style={{ width: 32, height: 32 }}
                       >
-                        <span className={`text-xs font-medium ${cfg.cor}`}>
-                          {cfg.label}
-                        </span>
-                        <span className="text-gray-600 text-xs">•</span>
-                        <span
-                          className={`text-xs font-bold ${isTimeA ? "text-green-400" : "text-orange-400"}`}
-                        >
-                          {isTimeA ? partida?.time_a : partida?.time_b}
-                        </span>
+                        {j?.foto_url ? (
+                          <img
+                            src={j.foto_url}
+                            alt={j.nome}
+                            style={{
+                              width: 32,
+                              height: 32,
+                              objectFit: "cover",
+                              display: "block",
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-800 flex items-center justify-center text-xs font-bold text-white">
+                            {j?.nome?.charAt(0) ?? "?"}
+                          </div>
+                        )}
                       </div>
+
+                      {/* Info */}
+                      <div
+                        className={`flex-1 min-w-0 ${!isTimeA ? "text-right" : ""}`}
+                      >
+                        <p className="text-white text-sm font-bold truncate">
+                          {j?.nome ?? "—"}
+                        </p>
+                        <div
+                          className={`flex items-center gap-2 ${!isTimeA ? "flex-row-reverse" : ""}`}
+                        >
+                          <span className={`text-xs font-medium ${cfg.cor}`}>
+                            {cfg.label}
+                          </span>
+                          <span className="text-gray-600 text-xs">•</span>
+                          <span
+                            className={`text-xs font-bold ${isTimeA ? "text-green-400" : "text-orange-400"}`}
+                          >
+                            {isTimeA ? partida?.time_a : partida?.time_b}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Remover */}
+                      <button
+                        onClick={() => handleRemoverEvento(e)}
+                        className="text-gray-500 hover:text-red-400 transition-colors text-sm flex-shrink-0"
+                      >
+                        ✕
+                      </button>
                     </div>
 
-                    {/* Remover */}
-                    <button
-                      onClick={() => handleRemoverEvento(e)}
-                      className="text-gray-500 hover:text-red-400 transition-colors text-sm flex-shrink-0"
-                    >
-                      ✕
-                    </button>
+                    {/* Linha da assistência (se houver) */}
+                    {assistencia && assistenteJogador && (
+                      <div
+                        className={`flex items-center gap-2 px-3 py-1.5 border-t ${
+                          isTimeA
+                            ? "border-green-500/20"
+                            : "border-orange-500/20"
+                        } ${!isTimeA ? "flex-row-reverse" : ""}`}
+                      >
+                        <span className="text-blue-400 text-xs">🎯</span>
+                        <div
+                          className="rounded-full overflow-hidden flex-shrink-0"
+                          style={{ width: 20, height: 20 }}
+                        >
+                          {assistenteJogador.foto_url ? (
+                            <img
+                              src={assistenteJogador.foto_url}
+                              alt={assistenteJogador.nome}
+                              style={{
+                                width: 20,
+                                height: 20,
+                                objectFit: "cover",
+                                display: "block",
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gray-800 flex items-center justify-center text-[9px] font-bold text-white">
+                              {assistenteJogador.nome?.charAt(0)}
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-blue-400 text-xs font-medium truncate">
+                          {assistenteJogador.nome?.split(" ")[0]}
+                        </span>
+                        <span className="text-gray-600 text-xs ml-auto">
+                          assist.
+                        </span>
+                        {/* Remover assistência individualmente */}
+                        <button
+                          onClick={() => handleRemoverEvento(assistencia)}
+                          className="text-gray-600 hover:text-red-400 transition-colors text-xs flex-shrink-0"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -455,65 +576,86 @@ ${!isTimeA ? "flex-row-reverse" : ""}`}
 
       {/* Modal Evento */}
       {modalEvento && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-md p-6 flex flex-col gap-4">
-            <h2 className="text-white font-black text-lg">Adicionar Evento</h2>
-
-            {/* Tipo */}
-            <div className="grid grid-cols-2 gap-2">
-              {(
-                Object.entries(TIPO_CONFIG) as [
-                  TipoEvento,
-                  (typeof TIPO_CONFIG)[TipoEvento],
-                ][]
-              ).map(([tipo, cfg]) => (
-                <button
-                  key={tipo}
-                  onClick={() => setTipoSelecionado(tipo)}
-                  className={`py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                    tipoSelecionado === tipo
-                      ? "bg-green-500 text-black"
-                      : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-                  }`}
-                >
-                  {cfg.emoji} {cfg.label}
-                </button>
-              ))}
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70">
+          <div className="bg-gray-900 border border-gray-800 rounded-t-3xl sm:rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col">
+            {/* Header do modal */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-800">
+              <h2 className="text-white font-black text-lg">
+                Adicionar Evento
+              </h2>
+              <button
+                onClick={() => setModalEvento(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors text-sm"
+              >
+                ✕
+              </button>
             </div>
 
-            {/* Time */}
-            <div>
-              <p className="text-gray-400 text-sm mb-2">Time do jogador</p>
+            <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
+              {/* Tipo de evento */}
               <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setTimeSelecionado("A")}
-                  className={`py-2.5 rounded-xl text-sm font-bold transition-colors ${
-                    timeSelecionado === "A"
-                      ? "bg-green-500 text-black"
-                      : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-                  }`}
-                >
-                  {partida?.time_a}
-                </button>
-                <button
-                  onClick={() => setTimeSelecionado("B")}
-                  className={`py-2.5 rounded-xl text-sm font-bold transition-colors ${
-                    timeSelecionado === "B"
-                      ? "bg-green-500 text-black"
-                      : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-                  }`}
-                >
-                  {partida?.time_b}
-                </button>
+                {(
+                  Object.entries(TIPO_CONFIG) as [
+                    TipoEvento,
+                    (typeof TIPO_CONFIG)[TipoEvento],
+                  ][]
+                ).map(([tipo, cfg]) => (
+                  <button
+                    key={tipo}
+                    onClick={() => {
+                      setTipoSelecionado(tipo);
+                      // Limpa assistência se mudar de tipo
+                      if (tipo !== "gol") {
+                        setAdicionarAssistencia(false);
+                        setAssistenteSelecionado("");
+                      }
+                    }}
+                    className={`py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                      tipoSelecionado === tipo
+                        ? "bg-green-500 text-black"
+                        : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+                    }`}
+                  >
+                    {cfg.emoji} {cfg.label}
+                  </button>
+                ))}
               </div>
 
-              {/* Jogador */}
-              <div className="flex flex-col gap-2 mt-3">
-                {" "}
-                <p className="text-gray-400 text-sm mb-2">
-                  Selecione o jogador
+              {/* Time */}
+              <div>
+                <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                  Time
                 </p>
-                <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setTimeSelecionado("A")}
+                    className={`py-2.5 rounded-xl text-sm font-bold transition-colors ${
+                      timeSelecionado === "A"
+                        ? "bg-green-500 text-black"
+                        : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+                    }`}
+                  >
+                    {partida?.time_a}
+                  </button>
+                  <button
+                    onClick={() => setTimeSelecionado("B")}
+                    className={`py-2.5 rounded-xl text-sm font-bold transition-colors ${
+                      timeSelecionado === "B"
+                        ? "bg-green-500 text-black"
+                        : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+                    }`}
+                  >
+                    {partida?.time_b}
+                  </button>
+                </div>
+              </div>
+
+              {/* Jogador que marcou */}
+              <div>
+                <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                  {tipoSelecionado === "gol" ? "Quem marcou" : "Jogador"}
+                </p>
+                <div className="flex flex-col gap-1.5 max-h-40 overflow-y-auto">
                   {jogadores.map((j) => (
                     <button
                       key={j.id}
@@ -556,9 +698,92 @@ ${!isTimeA ? "flex-row-reverse" : ""}`}
                   ))}
                 </div>
               </div>
+
+              {/* Seção de assistência — só aparece quando tipo é gol */}
+              {tipoSelecionado === "gol" && (
+                <div className="flex flex-col gap-3">
+                  {/* Toggle assistência */}
+                  <button
+                    onClick={() => {
+                      setAdicionarAssistencia((v) => !v);
+                      setAssistenteSelecionado("");
+                    }}
+                    className={`flex items-center justify-between px-4 py-3 rounded-xl border transition-colors ${
+                      adicionarAssistencia
+                        ? "bg-blue-500/20 border-blue-500/40 text-blue-400"
+                        : "bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-700"
+                    }`}
+                  >
+                    <span className="text-sm font-medium flex items-center gap-2">
+                      🎯 Teve assistência?
+                    </span>
+                    <span
+                      className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                        adicionarAssistencia
+                          ? "bg-blue-500 text-black"
+                          : "bg-gray-700 text-gray-500"
+                      }`}
+                    >
+                      {adicionarAssistencia ? "Sim" : "Não"}
+                    </span>
+                  </button>
+
+                  {/* Lista de jogadores para assistência */}
+                  {adicionarAssistencia && (
+                    <div>
+                      <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                        Quem deu a assistência
+                      </p>
+                      <div className="flex flex-col gap-1.5 max-h-40 overflow-y-auto">
+                        {jogadoresDoTime.map((j) => (
+                          <button
+                            key={j.id}
+                            onClick={() => setAssistenteSelecionado(j.id)}
+                            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors border ${
+                              assistenteSelecionado === j.id
+                                ? "bg-blue-500/20 border-blue-500/40 text-white"
+                                : "bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-700"
+                            }`}
+                          >
+                            <div
+                              className="rounded-full overflow-hidden flex-shrink-0"
+                              style={{ width: 32, height: 32 }}
+                            >
+                              {j.foto_url ? (
+                                <img
+                                  src={j.foto_url}
+                                  alt={j.nome}
+                                  style={{
+                                    width: 32,
+                                    height: 32,
+                                    objectFit: "cover",
+                                    display: "block",
+                                  }}
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-gray-700 flex items-center justify-center text-white text-xs font-bold">
+                                  {j.nome.charAt(0)}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 text-left">
+                              <p className="text-sm font-medium">{j.nome}</p>
+                              <p className="text-xs opacity-60">{j.posicao}</p>
+                            </div>
+                            {assistenteSelecionado === j.id && (
+                              <span className="text-blue-400">✓</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            <div className="p-5 border-t border-gray-800 flex flex-col gap-3">
+            {/* Footer */}
+            <div className="px-6 pb-6 pt-4 border-t border-gray-800 flex flex-col gap-3">
               {erro && <p className="text-red-400 text-sm">{erro}</p>}
               <div className="flex gap-3">
                 <button
