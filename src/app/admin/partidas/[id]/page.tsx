@@ -24,11 +24,11 @@ const TIPO_CONFIG = {
     cor: "text-green-400",
     bg: "bg-green-500/20",
   },
-  assistencia: {
-    label: "Assistência",
-    emoji: "🎯",
-    cor: "text-blue-400",
-    bg: "bg-blue-500/20",
+  gol_contra: {
+    label: "Gol Contra",
+    emoji: "😬",
+    cor: "text-red-400",
+    bg: "bg-red-500/20",
   },
   cartao_amarelo: {
     label: "Amarelo",
@@ -52,7 +52,6 @@ function formatarTempo(seg: number) {
   return `${m}:${s}`;
 }
 
-// Agrupa eventos: associa assistências ao gol correspondente
 function agruparEventos(eventos: EventoPartida[]) {
   const resultado: Array<{
     principal: EventoPartida;
@@ -67,7 +66,6 @@ function agruparEventos(eventos: EventoPartida[]) {
       continue;
     }
 
-    // Procura assistência do mesmo time no mesmo minuto
     const assist = eventos.find(
       (x) =>
         x.tipo === "assistencia" &&
@@ -97,21 +95,17 @@ export default function FichaTecnicaPage() {
   const [eventos, setEventos] = useState<EventoPartida[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Cronômetro
   const [segundos, setSegundos] = useState(0);
   const [rodando, setRodando] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Modal
   const [modalEvento, setModalEvento] = useState(false);
   const [tipoSelecionado, setTipoSelecionado] = useState<TipoEvento>("gol");
   const [jogadorSelecionado, setJogadorSelecionado] = useState("");
-  const [assistenteSelecionado, setAssistenteSelecionado] = useState(""); // "" = sem assistência
+  const [assistenteSelecionado, setAssistenteSelecionado] = useState("");
   const [timeSelecionado, setTimeSelecionado] = useState<"A" | "B">("A");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
-
-  // Controle da seção de assistência no modal
   const [adicionarAssistencia, setAdicionarAssistencia] = useState(false);
 
   useEffect(() => {
@@ -209,7 +203,6 @@ export default function FichaTecnicaPage() {
     try {
       const minuto = Math.floor(segundos / 60);
 
-      // Salva o evento principal
       await adicionarEvento(
         partidaId,
         jogadorSelecionado,
@@ -218,7 +211,6 @@ export default function FichaTecnicaPage() {
         minuto,
       );
 
-      // Se for gol com assistência, salva o evento de assistência no mesmo minuto
       if (
         tipoSelecionado === "gol" &&
         adicionarAssistencia &&
@@ -233,12 +225,25 @@ export default function FichaTecnicaPage() {
         );
       }
 
-      // Atualiza placar se for gol
       if (tipoSelecionado === "gol") {
         const novosGolsA =
           partida.gols_time_a + (timeSelecionado === "A" ? 1 : 0);
         const novosGolsB =
           partida.gols_time_b + (timeSelecionado === "B" ? 1 : 0);
+        await atualizarPlacar(partida.id, novosGolsA, novosGolsB);
+        setPartida((prev) =>
+          prev
+            ? { ...prev, gols_time_a: novosGolsA, gols_time_b: novosGolsB }
+            : prev,
+        );
+      }
+
+      if (tipoSelecionado === "gol_contra") {
+        // Ponto vai para o adversário
+        const novosGolsA =
+          partida.gols_time_a + (timeSelecionado === "B" ? 1 : 0);
+        const novosGolsB =
+          partida.gols_time_b + (timeSelecionado === "A" ? 1 : 0);
         await atualizarPlacar(partida.id, novosGolsA, novosGolsB);
         setPartida((prev) =>
           prev
@@ -282,6 +287,24 @@ export default function FichaTecnicaPage() {
       );
     }
 
+    if (evento.tipo === "gol_contra") {
+      // Reverte: tira ponto do adversário
+      const novosGolsA = Math.max(
+        0,
+        partida.gols_time_a - (evento.time === "B" ? 1 : 0),
+      );
+      const novosGolsB = Math.max(
+        0,
+        partida.gols_time_b - (evento.time === "A" ? 1 : 0),
+      );
+      await atualizarPlacar(partida.id, novosGolsA, novosGolsB);
+      setPartida((prev) =>
+        prev
+          ? { ...prev, gols_time_a: novosGolsA, gols_time_b: novosGolsB }
+          : prev,
+      );
+    }
+
     setEventos((prev) => prev.filter((e) => e.id !== evento.id));
   }
 
@@ -311,7 +334,6 @@ export default function FichaTecnicaPage() {
     );
   }
 
-  // Jogadores do time selecionado (para assistência não ser o mesmo que marcou o gol)
   const jogadoresDoTime = jogadores.filter((j) => j.id !== jogadorSelecionado);
 
   return (
@@ -341,21 +363,23 @@ export default function FichaTecnicaPage() {
 
       {/* Placar */}
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-        <div className="flex items-center justify-center gap-4">
-          <div className="flex-1 text-right">
-            <p className="text-white font-black text-lg truncate">
-              {partida?.time_a}
-            </p>
-          </div>
-          <div className="bg-gray-800 px-6 py-3 rounded-2xl text-center min-w-[100px]">
-            <span className="text-green-400 font-black text-3xl">
-              {partida?.gols_time_a} x {partida?.gols_time_b}
-            </span>
-          </div>
-          <div className="flex-1 text-left">
-            <p className="text-white font-black text-lg truncate">
-              {partida?.time_b}
-            </p>
+        <div className="flex flex-col items-center gap-3">
+          <div className="flex items-center justify-center gap-4 w-full">
+            <div className="flex-1 text-center">
+              <p className="text-white font-black text-lg truncate">
+                {partida?.time_a}
+              </p>
+            </div>
+            <div className="bg-gray-800 px-6 py-3 rounded-2xl text-center min-w-[100px]">
+              <span className="text-green-400 font-black text-4xl whitespace-nowrap">
+                {partida?.gols_time_a} x {partida?.gols_time_b}
+              </span>
+            </div>
+            <div className="flex-1 text-center">
+              <p className="text-white font-black text-lg truncate">
+                {partida?.time_b}
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -424,7 +448,6 @@ export default function FichaTecnicaPage() {
           </div>
         ) : (
           <div className="relative flex flex-col gap-0">
-            {/* Linha vertical */}
             <div className="absolute left-[52px] top-4 bottom-4 w-px bg-gradient-to-b from-green-500/30 to-orange-500/30" />
 
             {gruposEventos.map(({ principal: e, assistencia }) => {
@@ -434,6 +457,7 @@ export default function FichaTecnicaPage() {
               const assistenteJogador = assistencia
                 ? (assistencia as any).jogador
                 : null;
+              const isGolContra = e.tipo === "gol_contra";
 
               return (
                 <div key={e.id} className="flex items-start gap-3 py-2 group">
@@ -455,14 +479,14 @@ export default function FichaTecnicaPage() {
 
                   {/* Card do evento */}
                   <div
-                    className={`flex-1 border rounded-xl overflow-hidden transition-all
-                      ${
-                        isTimeA
+                    className={`flex-1 border rounded-xl overflow-hidden transition-all ${
+                      isGolContra
+                        ? "bg-red-500/10 border-red-500/30 group-hover:bg-red-500/20"
+                        : isTimeA
                           ? "bg-green-500/10 border-green-500/30 group-hover:bg-green-500/20"
                           : "bg-orange-500/10 border-orange-500/30 group-hover:bg-orange-500/20"
-                      }`}
+                    }`}
                   >
-                    {/* Linha principal: gol/evento */}
                     <div
                       className={`flex items-center gap-3 px-3 py-2.5 ${!isTimeA ? "flex-row-reverse" : ""}`}
                     >
@@ -503,11 +527,20 @@ export default function FichaTecnicaPage() {
                             {cfg.label}
                           </span>
                           <span className="text-gray-600 text-xs">•</span>
-                          <span
-                            className={`text-xs font-bold ${isTimeA ? "text-green-400" : "text-orange-400"}`}
-                          >
-                            {isTimeA ? partida?.time_a : partida?.time_b}
-                          </span>
+                          {isGolContra ? (
+                            <span
+                              className={`text-xs font-bold ${isTimeA ? "text-orange-400" : "text-green-400"}`}
+                            >
+                              contra{" "}
+                              {isTimeA ? partida?.time_b : partida?.time_a}
+                            </span>
+                          ) : (
+                            <span
+                              className={`text-xs font-bold ${isTimeA ? "text-green-400" : "text-orange-400"}`}
+                            >
+                              {isTimeA ? partida?.time_a : partida?.time_b}
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -520,14 +553,10 @@ export default function FichaTecnicaPage() {
                       </button>
                     </div>
 
-                    {/* Linha da assistência (se houver) */}
+                    {/* Linha da assistência */}
                     {assistencia && assistenteJogador && (
                       <div
-                        className={`flex items-center gap-2 px-3 py-1.5 border-t ${
-                          isTimeA
-                            ? "border-green-500/20"
-                            : "border-orange-500/20"
-                        } ${!isTimeA ? "flex-row-reverse" : ""}`}
+                        className={`flex items-center gap-2 px-3 py-1.5 border-t ${isTimeA ? "border-green-500/20" : "border-orange-500/20"} ${!isTimeA ? "flex-row-reverse" : ""}`}
                       >
                         <span className="text-blue-400 text-xs">🎯</span>
                         <div
@@ -557,7 +586,6 @@ export default function FichaTecnicaPage() {
                         <span className="text-gray-600 text-xs ml-auto">
                           assist.
                         </span>
-                        {/* Remover assistência individualmente */}
                         <button
                           onClick={() => handleRemoverEvento(assistencia)}
                           className="text-gray-600 hover:text-red-400 transition-colors text-xs flex-shrink-0"
@@ -578,7 +606,6 @@ export default function FichaTecnicaPage() {
       {modalEvento && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70">
           <div className="bg-gray-900 border border-gray-800 rounded-t-3xl sm:rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col">
-            {/* Header do modal */}
             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-800">
               <h2 className="text-white font-black text-lg">
                 Adicionar Evento
@@ -592,19 +619,18 @@ export default function FichaTecnicaPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
-              {/* Tipo de evento */}
+              {/* Tipo */}
               <div className="grid grid-cols-2 gap-2">
                 {(
                   Object.entries(TIPO_CONFIG) as [
                     TipoEvento,
-                    (typeof TIPO_CONFIG)[TipoEvento],
+                    (typeof TIPO_CONFIG)[keyof typeof TIPO_CONFIG],
                   ][]
                 ).map(([tipo, cfg]) => (
                   <button
                     key={tipo}
                     onClick={() => {
                       setTipoSelecionado(tipo);
-                      // Limpa assistência se mudar de tipo
                       if (tipo !== "gol") {
                         setAdicionarAssistencia(false);
                         setAssistenteSelecionado("");
@@ -624,7 +650,9 @@ export default function FichaTecnicaPage() {
               {/* Time */}
               <div>
                 <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">
-                  Time
+                  {tipoSelecionado === "gol_contra"
+                    ? "Time do jogador (que fez contra)"
+                    : "Time"}
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -648,9 +676,19 @@ export default function FichaTecnicaPage() {
                     {partida?.time_b}
                   </button>
                 </div>
+                {tipoSelecionado === "gol_contra" && (
+                  <p className="text-gray-500 text-xs mt-2 text-center">
+                    O ponto será marcado para{" "}
+                    <span className="text-orange-400 font-bold">
+                      {timeSelecionado === "A"
+                        ? partida?.time_b
+                        : partida?.time_a}
+                    </span>
+                  </p>
+                )}
               </div>
 
-              {/* Jogador que marcou */}
+              {/* Jogador */}
               <div>
                 <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">
                   {tipoSelecionado === "gol" ? "Quem marcou" : "Jogador"}
@@ -699,10 +737,9 @@ export default function FichaTecnicaPage() {
                 </div>
               </div>
 
-              {/* Seção de assistência — só aparece quando tipo é gol */}
+              {/* Assistência — só aparece quando tipo é gol */}
               {tipoSelecionado === "gol" && (
                 <div className="flex flex-col gap-3">
-                  {/* Toggle assistência */}
                   <button
                     onClick={() => {
                       setAdicionarAssistencia((v) => !v);
@@ -718,17 +755,12 @@ export default function FichaTecnicaPage() {
                       🎯 Teve assistência?
                     </span>
                     <span
-                      className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                        adicionarAssistencia
-                          ? "bg-blue-500 text-black"
-                          : "bg-gray-700 text-gray-500"
-                      }`}
+                      className={`text-xs font-bold px-2 py-0.5 rounded-full ${adicionarAssistencia ? "bg-blue-500 text-black" : "bg-gray-700 text-gray-500"}`}
                     >
                       {adicionarAssistencia ? "Sim" : "Não"}
                     </span>
                   </button>
 
-                  {/* Lista de jogadores para assistência */}
                   {adicionarAssistencia && (
                     <div>
                       <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">

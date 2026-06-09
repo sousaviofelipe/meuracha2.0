@@ -1,6 +1,7 @@
 export type Posicao = "Goleiro" | "Defensor" | "Meio-campo" | "Atacante";
 export type TipoEvento =
   | "gol"
+  | "gol_contra"
   | "assistencia"
   | "cartao_amarelo"
   | "cartao_vermelho";
