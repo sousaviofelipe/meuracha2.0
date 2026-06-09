@@ -833,7 +833,8 @@ export default function FichaTecnicaPage() {
                 >
                   {salvando
                     ? "Salvando..."
-                    : `Registrar ${TIPO_CONFIG[tipoSelecionado].emoji}`}
+                    : `Registrar ${TIPO_CONFIG[tipoSelecionado as keyof typeof TIPO_CONFIG]?.emoji ?? "✅"}`}
+                  {" "}
                 </button>
               </div>
             </div>
