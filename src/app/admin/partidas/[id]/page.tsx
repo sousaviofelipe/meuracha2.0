@@ -452,7 +452,9 @@ export default function FichaTecnicaPage() {
 
             {gruposEventos.map(({ principal: e, assistencia }) => {
               const j = (e as any).jogador;
-              const cfg = TIPO_CONFIG[e.tipo];
+              const cfg =
+                TIPO_CONFIG[e.tipo as keyof typeof TIPO_CONFIG] ??
+                TIPO_CONFIG.gol;
               const isTimeA = e.time === "A";
               const assistenteJogador = assistencia
                 ? (assistencia as any).jogador
