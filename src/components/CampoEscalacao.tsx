@@ -17,39 +17,62 @@ const POSICAO_LABEL: Record<string, string> = {
 
 function Avatar({ jogador, cor }: { jogador: Jogador; cor: string }) {
   return (
-    <div className="flex flex-col items-center gap-1" style={{ minWidth: 44 }}>
+    <div className="flex flex-col items-center" style={{ width: 56 }}>
+      {/* Foto grande com borda colorida */}
       <div
-        className="rounded-full overflow-hidden border-2 flex-shrink-0"
-        style={{ width: 38, height: 38, borderColor: cor }}
+        style={{
+          width: 52,
+          height: 64,
+          borderRadius: 10,
+          overflow: "hidden",
+          border: `2px solid ${cor}`,
+          flexShrink: 0,
+          boxShadow: `0 0 10px ${cor}55`,
+        }}
       >
         {jogador.foto_url ? (
           <img
             src={jogador.foto_url}
             alt={jogador.nome}
             style={{
-              width: 38,
-              height: 38,
+              width: "100%",
+              height: "100%",
               objectFit: "cover",
+              objectPosition: "top",
               display: "block",
             }}
           />
         ) : (
           <div
-            className="w-full h-full flex items-center justify-center text-white text-sm font-black"
-            style={{ background: cor + "40" }}
+            style={{
+              width: "100%",
+              height: "100%",
+              background: `linear-gradient(160deg, ${cor}30, ${cor}15)`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
           >
-            {jogador.nome.charAt(0).toUpperCase()}
+            <span style={{ color: cor, fontSize: 22, fontWeight: 900 }}>
+              {jogador.nome.charAt(0).toUpperCase()}
+            </span>
           </div>
         )}
       </div>
+
+      {/* Nome */}
       <span
-        className="text-white font-medium text-center leading-tight"
         style={{
+          color: "#fff",
           fontSize: 9,
-          maxWidth: 44,
+          fontWeight: 700,
+          marginTop: 4,
+          maxWidth: 56,
+          textAlign: "center",
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
+          lineHeight: 1.2,
         }}
       >
         {jogador.nome.split(" ")[0]}
@@ -99,11 +122,11 @@ function ColunaTime({
     <div className="flex-1 flex flex-col" style={{ minWidth: 0 }}>
       {/* Header do time */}
       <div
-        className="py-2.5 text-center font-black text-white text-sm sticky top-0"
-        style={{ background: corBg }}
+        className="py-2.5 text-center font-black text-white text-sm sticky top-0 z-10"
+        style={{ background: corBg, borderBottom: `2px solid ${cor}60` }}
       >
         {nome}
-        <span className="ml-1 text-xs opacity-70">({totalJogadores})</span>
+        <span className="ml-1 text-xs opacity-60">({totalJogadores})</span>
       </div>
 
       {/* Linhas por posição */}
@@ -113,31 +136,56 @@ function ColunaTime({
           return (
             <div
               key={posicao}
-              className="flex flex-col gap-2 py-3 px-2"
               style={{
                 borderBottom:
                   idx < POSICOES.length - 1
-                    ? "1px dashed rgba(255,255,255,0.1)"
+                    ? "1px dashed rgba(255,255,255,0.08)"
                     : "none",
-                minHeight: 80,
+                minHeight: 100,
+                padding: "10px 6px 8px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
               }}
             >
+              {/* Label de posição */}
               <span
-                className="font-bold tracking-widest text-center"
-                style={{ fontSize: 9, color: cor, opacity: 0.8 }}
+                style={{
+                  fontSize: 8,
+                  fontWeight: 800,
+                  letterSpacing: "0.12em",
+                  color: cor,
+                  opacity: 0.7,
+                  textAlign: "center",
+                }}
               >
                 {POSICAO_LABEL[posicao]}
               </span>
+
               {lista.length === 0 ? (
-                <div className="flex-1 flex items-center justify-center">
+                <div
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
                   <span
-                    style={{ fontSize: 10, color: "rgba(255,255,255,0.2)" }}
+                    style={{ fontSize: 10, color: "rgba(255,255,255,0.15)" }}
                   >
                     —
                   </span>
                 </div>
               ) : (
-                <div className="flex flex-wrap justify-center gap-2">
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    justifyContent: "center",
+                    gap: 6,
+                  }}
+                >
                   {lista.map((j) => (
                     <Avatar key={j.id} jogador={j} cor={cor} />
                   ))}
@@ -147,16 +195,36 @@ function ColunaTime({
           );
         })}
 
-        {/* Outros (sem posição padrão) */}
+        {/* Outros */}
         {porPosicao["Outros"].length > 0 && (
-          <div className="flex flex-col gap-2 py-3 px-2">
+          <div
+            style={{
+              padding: "10px 6px 8px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+            }}
+          >
             <span
-              className="font-bold tracking-widest text-center"
-              style={{ fontSize: 9, color: cor, opacity: 0.8 }}
+              style={{
+                fontSize: 8,
+                fontWeight: 800,
+                letterSpacing: "0.12em",
+                color: cor,
+                opacity: 0.7,
+                textAlign: "center",
+              }}
             >
               OUT
             </span>
-            <div className="flex flex-wrap justify-center gap-2">
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "center",
+                gap: 6,
+              }}
+            >
               {porPosicao["Outros"].map((j) => (
                 <Avatar key={j.id} jogador={j} cor={cor} />
               ))}
@@ -186,14 +254,14 @@ export default function CampoEscalacao({ escalacao, jogadores }: Props) {
 
         {/* Divisor central */}
         <div
-          className="flex items-center justify-center flex-shrink-0"
-          style={{ width: 24, background: "#166534" }}
+          className="flex-shrink-0 flex items-center justify-center"
+          style={{ width: 20, background: "#166534" }}
         >
           <div
             style={{
               width: 1,
               height: "100%",
-              background: "rgba(255,255,255,0.2)",
+              background: "rgba(255,255,255,0.15)",
             }}
           />
         </div>
