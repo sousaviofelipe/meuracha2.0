@@ -363,23 +363,22 @@ export default function FichaTecnicaPage() {
 
       {/* Placar */}
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-        <div className="flex flex-col items-center gap-3">
-          <div className="flex items-center justify-center gap-4 w-full">
-            <div className="flex-1 text-center">
-              <p className="text-white font-black text-lg truncate">
-                {partida?.time_a}
-              </p>
-            </div>
-            <div className="bg-gray-800 px-6 py-3 rounded-2xl text-center min-w-[100px]">
-              <span className="text-green-400 font-black text-4xl whitespace-nowrap">
-                {partida?.gols_time_a} x {partida?.gols_time_b}
-              </span>
-            </div>
-            <div className="flex-1 text-center">
-              <p className="text-white font-black text-lg truncate">
-                {partida?.time_b}
-              </p>
-            </div>
+        <div className="flex flex-col items-center gap-2">
+          {/* Placar centralizado */}
+          <div className="bg-gray-800 px-8 py-3 rounded-2xl">
+            <span className="text-green-400 font-black text-4xl whitespace-nowrap">
+              {partida?.gols_time_a} x {partida?.gols_time_b}
+            </span>
+          </div>
+          {/* Nomes abaixo */}
+          <div className="flex items-center justify-between w-full px-1 mt-1">
+            <p className="text-gray-300 font-bold text-xs flex-1 text-left truncate">
+              {partida?.time_a}
+            </p>
+            <p className="text-gray-600 text-xs px-3">vs</p>
+            <p className="text-gray-300 font-bold text-xs flex-1 text-right truncate">
+              {partida?.time_b}
+            </p>
           </div>
         </div>
       </div>
