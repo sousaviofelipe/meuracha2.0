@@ -228,15 +228,15 @@ export default function PartidasPage() {
                 placeholder="Time A"
                 value={timeA}
                 onChange={(e) => setTimeA(e.target.value)}
-                className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 transition-colors"
+                className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 transition-colors"
               />
-              <span className="text-gray-500 font-bold">x</span>
+              <span className="text-gray-500 font-bold flex-shrink-0">x</span>
               <input
                 type="text"
                 placeholder="Time B"
                 value={timeB}
                 onChange={(e) => setTimeB(e.target.value)}
-                className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 transition-colors"
+                className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 transition-colors"
               />
             </div>
 
