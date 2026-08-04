@@ -9,6 +9,7 @@ import {
   dbVerificarCodigoDisponivel,
   dbUploadEstatuto,
   dbAtualizarEstatuto,
+  dbAtualizarConfiguracoes,
 } from "@/lib/db/rachas.db";
 import { dbAtualizarFinanceiro } from "@/lib/db/financeiro.db";
 import { Racha } from "@/types";
@@ -24,10 +25,13 @@ export default function ConfiguracoesPage() {
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [salvandoPix, setSalvandoPix] = useState(false);
+  const [salvandoConfig, setSalvandoConfig] = useState(false);
   const [erro, setErro] = useState("");
   const [erroPix, setErroPix] = useState("");
+  const [erroConfig, setErroConfig] = useState("");
   const [sucesso, setSucesso] = useState(false);
   const [sucessoPix, setSucessoPix] = useState(false);
+  const [sucessoConfig, setSucessoConfig] = useState(false);
 
   // Racha
   const [nome, setNome] = useState("");
@@ -39,6 +43,10 @@ export default function ConfiguracoesPage() {
   const [pixChave, setPixChave] = useState("");
   const [pixTitular, setPixTitular] = useState("");
   const [pixBanco, setPixBanco] = useState("");
+
+  // Configurações de presença
+  const [whatsappDiretoria, setWhatsappDiretoria] = useState("");
+  const [horarioLimite, setHorarioLimite] = useState("");
 
   useEffect(() => {
     async function carregar() {
@@ -55,6 +63,8 @@ export default function ConfiguracoesPage() {
       setPixTitular((r as any).pix_titular ?? "");
       setPixBanco((r as any).pix_banco ?? "");
       setEstatutoUrl((r as any).estatuto_url ?? "");
+      setWhatsappDiretoria(r.whatsapp_diretoria ?? "");
+      setHorarioLimite(r.horario_limite_presenca ?? "");
       setLoading(false);
     }
     carregar();
@@ -139,8 +149,41 @@ export default function ConfiguracoesPage() {
     }
   }
 
+  async function handleSalvarConfiguracoes() {
+    if (!racha) return;
+    setSalvandoConfig(true);
+    setErroConfig("");
+    setSucessoConfig(false);
+    try {
+      await dbAtualizarConfiguracoes(
+        racha.id,
+        whatsappDiretoria,
+        horarioLimite,
+      );
+      setRacha((prev) =>
+        prev
+          ? {
+              ...prev,
+              whatsapp_diretoria: whatsappDiretoria,
+              horario_limite_presenca: horarioLimite,
+            }
+          : prev,
+      );
+      setSucessoConfig(true);
+      setTimeout(() => setSucessoConfig(false), 3000);
+    } catch (err: any) {
+      setErroConfig(err.message);
+    } finally {
+      setSalvandoConfig(false);
+    }
+  }
+
   function handleCodigo(valor: string) {
     setCodigo(valor.toUpperCase().replace(/[^A-Z0-9-]/g, ""));
+  }
+
+  function handleWhatsapp(valor: string) {
+    setWhatsappDiretoria(valor.replace(/\D/g, ""));
   }
 
   if (loading) {
@@ -282,10 +325,63 @@ export default function ConfiguracoesPage() {
         </button>
       </div>
 
+      {/* Card Configurações de Presença */}
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 flex flex-col gap-5">
+        <h2 className="text-white font-bold">📅 Confirmação de Presença</h2>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-gray-400 text-sm font-medium">
+            WhatsApp da diretoria
+          </label>
+          <div className="flex items-center gap-2 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 focus-within:border-green-500 transition-colors">
+            <span className="text-gray-500 text-sm">+55</span>
+            <input
+              type="text"
+              value={whatsappDiretoria}
+              onChange={(e) => handleWhatsapp(e.target.value)}
+              placeholder="83999999999"
+              maxLength={13}
+              className="flex-1 bg-transparent text-white placeholder-gray-500 focus:outline-none"
+            />
+          </div>
+          <p className="text-gray-600 text-xs">
+            Apenas números. Jogadores bloqueados verão um botão para contatar
+            este número.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-gray-400 text-sm font-medium">
+            Horário limite para confirmações
+          </label>
+          <input
+            type="time"
+            value={horarioLimite}
+            onChange={(e) => setHorarioLimite(e.target.value)}
+            className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-500 transition-colors"
+          />
+          <p className="text-gray-600 text-xs">
+            No dia da partida, após esse horário nenhum jogador poderá confirmar
+            ou alterar presença.
+          </p>
+        </div>
+
+        {erroConfig && <p className="text-red-400 text-sm">{erroConfig}</p>}
+        {sucessoConfig && (
+          <p className="text-green-400 text-sm">✅ Configurações salvas!</p>
+        )}
+        <button
+          onClick={handleSalvarConfiguracoes}
+          disabled={salvandoConfig}
+          className="w-full py-3 rounded-xl bg-green-500 hover:bg-green-400 disabled:opacity-50 text-black font-bold transition-colors"
+        >
+          {salvandoConfig ? "Salvando..." : "Salvar configurações"}
+        </button>
+      </div>
+
       {/* Card Estatuto */}
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 flex flex-col gap-5">
         <h2 className="text-white font-bold">📄 Estatuto do Racha</h2>
-
         {estatutoUrl && (
           <div className="bg-gray-800 rounded-xl p-3 flex items-center gap-3">
             <span className="text-red-400 text-2xl">📕</span>
@@ -293,7 +389,6 @@ export default function ConfiguracoesPage() {
               <p className="text-white text-sm font-medium">Estatuto atual</p>
               <p className="text-gray-500 text-xs truncate">{estatutoUrl}</p>
             </div>
-
             <a
               href={estatutoUrl}
               target="_blank"
@@ -304,7 +399,6 @@ export default function ConfiguracoesPage() {
             </a>
           </div>
         )}
-
         <input
           ref={estatutoRef}
           type="file"
@@ -312,7 +406,6 @@ export default function ConfiguracoesPage() {
           className="hidden"
           onChange={handleUploadEstatuto}
         />
-
         <button
           onClick={() => estatutoRef.current?.click()}
           disabled={uploadandoEstatuto}
@@ -324,7 +417,6 @@ export default function ConfiguracoesPage() {
               ? "🔄 Substituir PDF"
               : "📤 Fazer upload do PDF"}
         </button>
-
         {erroEstatuto && <p className="text-red-400 text-sm">{erroEstatuto}</p>}
         {sucessoEstatuto && (
           <p className="text-green-400 text-sm">
