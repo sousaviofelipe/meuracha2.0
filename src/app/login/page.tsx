@@ -420,7 +420,7 @@ export default function LoginPage() {
               {modoJogador === "cadastro" && (
                 <input
                   type="text"
-                  placeholder="Seu nome completo"
+                  placeholder="Seu Nome"
                   value={nomeJogador}
                   onChange={(e) => setNomeJogador(e.target.value)}
                   required
