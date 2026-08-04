@@ -16,10 +16,7 @@ import {
   dbDesvotarPublico,
 } from "@/lib/db/publico.db";
 import { getUser } from "@/lib/services/auth.service";
-import {
-  buscarJogadoresPorUserId,
-  listarJogadores,
-} from "@/lib/services/jogadores.service";
+import { buscarJogadoresPorUserId } from "@/lib/services/jogadores.service";
 import {
   listarPresencas,
   confirmarPresenca,
