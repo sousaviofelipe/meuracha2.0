@@ -210,7 +210,7 @@ export default function JogadorPerfilPage() {
           >
             <input
               type="text"
-              placeholder="Código do racha (ex: RACHA01)"
+              placeholder="Código do racha (ex: RPS)"
               value={codigoRacha}
               onChange={(e) => setCodigoRacha(e.target.value.toUpperCase())}
               className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 transition-colors uppercase font-mono tracking-widest"
