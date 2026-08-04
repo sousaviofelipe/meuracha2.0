@@ -161,7 +161,8 @@ export interface VinculoPendente {
   jogador_id: string;
   racha_id: string;
   user_id: string;
+  usuario_email?: string;
+  usuario_nome?: string; // <- adicionar aqui
   criado_em: string;
   jogador?: Jogador;
-  usuario_email?: string;
 }

@@ -57,6 +57,7 @@ export default function LoginPage() {
 
   // Jogador
   const [modoJogador, setModoJogador] = useState<ModoJogador>("login");
+  const [nomeJogador, setNomeJogador] = useState("");
   const [emailJogador, setEmailJogador] = useState("");
   const [passwordJogador, setPasswordJogador] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
@@ -186,7 +187,7 @@ export default function LoginPage() {
           throw new Error("As senhas não coincidem.");
         if (passwordJogador.length < 6)
           throw new Error("A senha deve ter pelo menos 6 caracteres.");
-        await signUpJogador(emailJogador, passwordJogador);
+        await signUpJogador(emailJogador, passwordJogador, nomeJogador);
         await signInJogador(emailJogador, passwordJogador);
       } else {
         await signInJogador(emailJogador, passwordJogador);
@@ -323,7 +324,7 @@ export default function LoginPage() {
                     onClick={() => acessarRacha(f.codigo)}
                     className="bg-green-500 hover:bg-green-400 text-black font-bold px-3 py-1.5 rounded-xl text-xs transition-colors"
                   >
-                    Acessar →
+                    Curiar →
                   </button>
                   <button
                     onClick={() => favoritar(f as any)}
@@ -416,6 +417,16 @@ export default function LoginPage() {
             )}
 
             <form onSubmit={handleJogador} className="flex flex-col gap-4">
+              {modoJogador === "cadastro" && (
+                <input
+                  type="text"
+                  placeholder="Seu nome completo"
+                  value={nomeJogador}
+                  onChange={(e) => setNomeJogador(e.target.value)}
+                  required
+                  className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 transition-colors"
+                />
+              )}
               <input
                 type="email"
                 placeholder="Email"

@@ -41,6 +41,7 @@ export default function JogadorPerfilPage() {
       }
       setUserId(user.id);
       setUserEmail(user.email ?? "");
+      const [userNome, setUserNome] = useState("");
       const data = await buscarJogadoresPorUserId(user.id);
       setJogadores(data);
     } finally {
@@ -78,7 +79,9 @@ export default function JogadorPerfilPage() {
           "Você já tem um pedido pendente neste racha. Aguarde a aprovação do admin.",
         );
 
-      await solicitarVinculo(racha.id, userId, userEmail);
+      const userMeta = await getUser();
+      const nomeUsuario = userMeta?.user_metadata?.nome ?? "";
+      await solicitarVinculo(racha.id, userId, userEmail, userNome);
       setSucessoVinculo(
         `Pedido enviado para o racha "${racha.nome}"! O admin irá aprovar em breve.`,
       );

@@ -48,12 +48,16 @@ export async function signInJogador(email: string, password: string) {
   return data;
 }
 
-export async function signUpJogador(email: string, password: string) {
+export async function signUpJogador(
+  email: string,
+  password: string,
+  nome: string,
+) {
   const supabase = createSupabaseClient();
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { tipo: "jogador" } },
+    options: { data: { tipo: "jogador", nome } },
   });
   if (error) throw new Error(error.message);
   return data;
@@ -74,10 +78,16 @@ export async function solicitarVinculo(
   rachaId: string,
   userId: string,
   userEmail: string,
+  nomeUsuario?: string,
 ): Promise<void> {
   const { error } = await getSupabase()
     .from("vinculos_pendentes")
-    .insert({ racha_id: rachaId, user_id: userId, usuario_email: userEmail });
+    .insert({
+      racha_id: rachaId,
+      user_id: userId,
+      usuario_email: userEmail,
+      usuario_nome: nomeUsuario ?? null,
+    });
   if (error) throw new Error(error.message);
 }
 

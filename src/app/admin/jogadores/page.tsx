@@ -260,6 +260,11 @@ export default function JogadoresPage() {
                   <p className="text-white text-sm font-semibold truncate">
                     {v.usuario_email}
                   </p>
+                  {v.usuario_nome && (
+                    <p className="text-gray-400 text-xs font-medium">
+                      {v.usuario_nome}
+                    </p>
+                  )}
                   <p className="text-gray-500 text-xs">Quer entrar no racha</p>
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
