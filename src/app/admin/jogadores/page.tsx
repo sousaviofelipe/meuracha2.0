@@ -15,6 +15,7 @@ import {
   listarVinculosPendentes,
   aprovarVinculo,
   rejeitarVinculo,
+  desvincularJogador,
 } from "@/lib/services/jogadores.service";
 import { Jogador, Posicao, Racha, VinculoPendente } from "@/types";
 
@@ -203,6 +204,19 @@ export default function JogadoresPage() {
     await toggleBloqueio(j.id, !j.bloqueado);
     setJogadores((prev) =>
       prev.map((x) => (x.id === j.id ? { ...x, bloqueado: !j.bloqueado } : x)),
+    );
+  }
+
+  async function handleDesvincular(j: Jogador) {
+    if (
+      !confirm(
+        `Desvincular a conta de ${j.nome}? O jogador precisará solicitar vínculo novamente.`,
+      )
+    )
+      return;
+    await desvincularJogador(j.id);
+    setJogadores((prev) =>
+      prev.map((x) => (x.id === j.id ? { ...x, user_id: undefined } : x)),
     );
   }
 
@@ -405,6 +419,15 @@ export default function JogadoresPage() {
                 >
                   💰
                 </button>
+                {j.user_id && (
+                  <button
+                    onClick={() => handleDesvincular(j)}
+                    title="Desvincular conta"
+                    className="text-xs text-gray-400 hover:text-orange-400 bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded-lg transition-colors"
+                  >
+                    🔗
+                  </button>
+                )}
                 <button
                   onClick={() => handleToggleBloqueio(j)}
                   title={
