@@ -352,7 +352,6 @@ export default function JogadoresPage() {
                   </div>
                 )}
               </div>
-
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -387,9 +386,9 @@ export default function JogadoresPage() {
                   </span>
                 )}
               </div>
-
-              {/* Ações */}
-              <div className="flex flex-col gap-1">
+              {/* Ações */} {/* linhas dos botões de ação em jogadores */}
+              <div className="grid grid-cols-3 gap-1">
+                {" "}
                 <button
                   onClick={() => abrirEditar(j)}
                   title="Editar"
@@ -552,8 +551,15 @@ export default function JogadoresPage() {
       {modalVinculo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
           <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-md p-6 flex flex-col gap-4">
-            <h2 className="text-white font-black text-lg">Aprovar vínculo</h2>
-
+            <div className="flex items-center justify-between">
+              <h2 className="text-white font-black text-lg">Aprovar vínculo</h2>
+              <button
+                onClick={() => setModalVinculo(null)}
+                className="text-gray-500 hover:text-white text-xl transition-colors"
+              >
+                ✕
+              </button>
+            </div>
             <div className="bg-gray-800 rounded-xl px-4 py-3">
               <p className="text-gray-400 text-xs">Solicitante</p>
               <p className="text-white font-semibold text-sm mt-0.5">
