@@ -103,7 +103,7 @@ export async function dbBuscarJogadorPorUserId(
   if (!data || data.length === 0) return [];
 
   // Busca os rachas separadamente para evitar problema de RLS no join
-  const rachaIds = [...new Set(data.map((j) => j.racha_id))];
+  const rachaIds = [...new Set(data.map((j: any) => j.racha_id))];
   const { data: rachas } = await getSupabase()
     .from("rachas")
     .select("id, nome, codigo")
