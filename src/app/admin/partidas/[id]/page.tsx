@@ -15,8 +15,11 @@ import {
   resetarCronometro,
 } from "@/lib/services/partidas.service";
 import { getSupabase } from "@/lib/db/supabase";
-import { Partida, Jogador, EventoPartida, TipoEvento } from "@/types";
-
+import { Partida, Jogador, EventoPartida, TipoEvento, Presenca } from "@/types";
+import {
+  listarPresencas,
+  agruparPresencas,
+} from "@/lib/services/presencas.service";
 const TIPO_CONFIG = {
   gol: {
     label: "Gol",
@@ -105,6 +108,7 @@ export default function FichaTecnicaPage() {
   const [assistenteSelecionado, setAssistenteSelecionado] = useState("");
   const [timeSelecionado, setTimeSelecionado] = useState<"A" | "B">("A");
   const [salvando, setSalvando] = useState(false);
+  const [presencas, setPresencas] = useState<Presenca[]>([]);
   const [erro, setErro] = useState("");
   const [adicionarAssistencia, setAdicionarAssistencia] = useState(false);
 
@@ -139,6 +143,8 @@ export default function FichaTecnicaPage() {
       ]);
       setJogadores(j.filter((x) => x.ativo));
       setEventos(e);
+      const pres = await listarPresencas(partidaId);
+      setPresencas(pres);
       setLoading(false);
     }
     carregar();
@@ -432,7 +438,133 @@ export default function FichaTecnicaPage() {
       >
         + Adicionar Evento
       </button>
+      {/* Presenças */}
+      {(() => {
+        const { confirmados, ausencias, semResposta } = agruparPresencas(
+          presencas,
+          jogadores,
+        );
+        return (
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 flex flex-col gap-4">
+            <h2 className="text-white font-bold text-sm">
+              👥 Confirmações de presença
+            </h2>
 
+            {/* Confirmados */}
+            <div>
+              <p className="text-green-400 text-xs font-bold mb-2">
+                ✅ Confirmados ({confirmados.length})
+              </p>
+              {confirmados.length === 0 ? (
+                <p className="text-gray-600 text-xs">Nenhum confirmado ainda</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {confirmados.map((p) => {
+                    const jog = jogadores.find((j) => j.id === p.jogador_id);
+                    return (
+                      <div
+                        key={p.id}
+                        className="flex items-center gap-1.5 bg-green-500/10 border border-green-500/20 rounded-full px-2 py-1"
+                      >
+                        <div className="w-5 h-5 rounded-full bg-gray-700 overflow-hidden flex-shrink-0">
+                          {jog?.foto_url ? (
+                            <img
+                              src={jog.foto_url}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[9px]">
+                              👤
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-green-400 text-xs font-medium">
+                          {jog?.nome?.split(" ")[0] ?? "—"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Ausências */}
+            {ausencias.length > 0 && (
+              <div>
+                <p className="text-red-400 text-xs font-bold mb-2">
+                  ❌ Ausências justificadas ({ausencias.length})
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  {ausencias.map((p) => {
+                    const jog = jogadores.find((j) => j.id === p.jogador_id);
+                    return (
+                      <div key={p.id} className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-gray-700 overflow-hidden flex-shrink-0">
+                          {jog?.foto_url ? (
+                            <img
+                              src={jog.foto_url}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[9px]">
+                              👤
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-white text-xs flex-1">
+                          {jog?.nome ?? "—"}
+                        </span>
+                        <span className="text-gray-500 text-xs bg-gray-800 px-2 py-0.5 rounded-full">
+                          {p.motivo}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Sem resposta */}
+            {semResposta.length > 0 && (
+              <div>
+                <p className="text-gray-500 text-xs font-bold mb-2">
+                  ⏳ Sem resposta ({semResposta.length})
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {(semResposta as Jogador[]).map((jog) => (
+                    <div
+                      key={jog.id}
+                      className="flex items-center gap-1.5 bg-gray-800 rounded-full px-2 py-1"
+                    >
+                      <div className="w-5 h-5 rounded-full bg-gray-700 overflow-hidden flex-shrink-0">
+                        {jog.foto_url ? (
+                          <img
+                            src={jog.foto_url}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-[9px]">
+                            👤
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-gray-400 text-xs">
+                        {jog.nome?.split(" ")[0]}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Linha do tempo */}
+      <div className="flex flex-col gap-1"></div>
       {/* Linha do tempo */}
       <div className="flex flex-col gap-1">
         <h2 className="text-gray-400 text-sm font-semibold mb-2">
