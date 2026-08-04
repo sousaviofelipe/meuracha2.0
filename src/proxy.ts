@@ -31,12 +31,24 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const isAdminRoute = request.nextUrl.pathname.startsWith("/admin");
+  const isJogadorRoute =
+    request.nextUrl.pathname.startsWith("/jogador/perfil") ||
+    request.nextUrl.pathname.startsWith("/jogador/nova-senha");
   const isLoginPage = request.nextUrl.pathname === "/login";
 
+  // Rotas admin — exige usuário logado
   if (isAdminRoute && !user) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
+  // Rotas protegidas do jogador — exige usuário logado
+  if (isJogadorRoute && !user) {
+    const redirectUrl = new URL("/login", request.url);
+    redirectUrl.searchParams.set("redirect", request.nextUrl.pathname);
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  // Login — redireciona se já logado
   if (isLoginPage && user) {
     return NextResponse.redirect(new URL("/admin/dashboard", request.url));
   }
@@ -45,5 +57,10 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/login"],
+  matcher: [
+    "/admin/:path*",
+    "/login",
+    "/jogador/perfil/:path*",
+    "/jogador/nova-senha",
+  ],
 };

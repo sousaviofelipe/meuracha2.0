@@ -79,6 +79,7 @@ export async function dbGetUltimaPartida(
     .single();
   return data;
 }
+
 export async function dbAtualizarRacha(
   id: string,
   nome: string,
@@ -95,6 +96,21 @@ export async function dbAtualizarRacha(
   return data;
 }
 
+export async function dbAtualizarConfiguracoes(
+  id: string,
+  whatsappDiretoria: string,
+  horarioLimitePresenca: string,
+): Promise<void> {
+  const { error } = await getSupabase()
+    .from("rachas")
+    .update({
+      whatsapp_diretoria: whatsappDiretoria.trim() || null,
+      horario_limite_presenca: horarioLimitePresenca || null,
+    })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
 export async function dbVerificarCodigoDisponivel(
   codigo: string,
   rachaId: string,
@@ -107,6 +123,7 @@ export async function dbVerificarCodigoDisponivel(
     .single();
   return !data;
 }
+
 export async function dbAtualizarEstatuto(
   id: string,
   url: string,

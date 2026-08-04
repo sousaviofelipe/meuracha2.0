@@ -12,6 +12,8 @@ export interface Racha {
   nome: string;
   codigo: string;
   descricao?: string;
+  whatsapp_diretoria?: string;
+  horario_limite_presenca?: string;
   criado_em: string;
 }
 
@@ -23,6 +25,9 @@ export interface Jogador {
   foto_url?: string;
   ativo: boolean;
   mensalista: boolean;
+  email?: string;
+  user_id?: string;
+  bloqueado: boolean;
   criado_em: string;
 }
 
@@ -101,6 +106,7 @@ export interface Escalacao {
   ativa: boolean;
   criado_em: string;
 }
+
 export interface Pagamento {
   id: string;
   racha_id: string;
@@ -116,4 +122,46 @@ export interface JogadorFinanceiro {
   jogador: Jogador;
   pagamentos: Pagamento[];
   mesesAtraso: number;
+}
+
+// --- Novas interfaces ---
+
+export interface Presenca {
+  id: string;
+  partida_id: string;
+  jogador_id: string;
+  confirmado: boolean;
+  motivo?: string;
+  criado_em: string;
+  jogador?: Jogador;
+}
+
+export interface PartidaComPresencas extends Partida {
+  presencas?: Presenca[];
+  total_confirmados?: number;
+}
+
+export interface JogadorPerfil {
+  jogador: Jogador;
+  estatisticas?: Estatistica;
+  presencas_confirmadas: number;
+  rachas: RachaDoJogador[];
+}
+
+export interface RachaDoJogador {
+  racha_id: string;
+  racha_nome: string;
+  racha_codigo: string;
+  jogador_id: string;
+  vinculado: boolean;
+}
+
+export interface VinculoPendente {
+  id: string;
+  jogador_id: string;
+  racha_id: string;
+  user_id: string;
+  criado_em: string;
+  jogador?: Jogador;
+  usuario_email?: string;
 }

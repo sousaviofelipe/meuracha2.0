@@ -1,5 +1,5 @@
 import { getSupabase } from "@/lib/db/supabase";
-import { Jogador, Posicao } from "@/types";
+import { Jogador, Posicao, VinculoPendente } from "@/types";
 
 export async function dbListarJogadores(rachaId: string): Promise<Jogador[]> {
   const { data } = await getSupabase()
@@ -15,10 +15,17 @@ export async function dbCriarJogador(
   nome: string,
   posicao: Posicao,
   fotoUrl?: string,
+  email?: string,
 ): Promise<Jogador> {
   const { data, error } = await getSupabase()
     .from("jogadores")
-    .insert({ racha_id: rachaId, nome, posicao, foto_url: fotoUrl })
+    .insert({
+      racha_id: rachaId,
+      nome,
+      posicao,
+      foto_url: fotoUrl,
+      email: email ?? null,
+    })
     .select()
     .single();
   if (error) throw new Error(error.message);
@@ -30,10 +37,11 @@ export async function dbEditarJogador(
   nome: string,
   posicao: Posicao,
   fotoUrl?: string,
+  email?: string,
 ): Promise<Jogador> {
   const { data, error } = await getSupabase()
     .from("jogadores")
-    .update({ nome, posicao, foto_url: fotoUrl })
+    .update({ nome, posicao, foto_url: fotoUrl, email: email ?? null })
     .eq("id", id)
     .select()
     .single();
@@ -79,5 +87,90 @@ export async function dbToggleMensalista(
     .from("jogadores")
     .update({ mensalista })
     .eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+// --- Novas funções ---
+
+export async function dbBuscarJogadorPorUserId(
+  userId: string,
+): Promise<Jogador[]> {
+  const { data, error } = await getSupabase()
+    .from("jogadores")
+    .select("*, racha:rachas(id, nome, codigo)")
+    .eq("user_id", userId);
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function dbBuscarJogadorPorEmail(
+  email: string,
+  rachaId: string,
+): Promise<Jogador | null> {
+  const { data } = await getSupabase()
+    .from("jogadores")
+    .select("*")
+    .eq("email", email)
+    .eq("racha_id", rachaId)
+    .maybeSingle();
+  return data ?? null;
+}
+
+export async function dbVincularJogadorManualmente(
+  jogadorId: string,
+  userId: string,
+): Promise<void> {
+  const { error } = await getSupabase()
+    .from("jogadores")
+    .update({ user_id: userId })
+    .eq("id", jogadorId);
+  if (error) throw new Error(error.message);
+}
+
+export async function dbDesvincularJogador(jogadorId: string): Promise<void> {
+  const { error } = await getSupabase()
+    .from("jogadores")
+    .update({ user_id: null })
+    .eq("id", jogadorId);
+  if (error) throw new Error(error.message);
+}
+
+export async function dbListarVinculosPendentes(
+  rachaId: string,
+): Promise<VinculoPendente[]> {
+  const { data, error } = await getSupabase()
+    .from("vinculos_pendentes")
+    .select("*, jogador:jogadores(*)")
+    .eq("racha_id", rachaId)
+    .order("criado_em", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function dbAprovarVinculo(
+  vinculoId: string,
+  jogadorId: string,
+  userId: string,
+): Promise<void> {
+  const supabase = getSupabase();
+
+  const { error: vinculoError } = await supabase
+    .from("vinculos_pendentes")
+    .delete()
+    .eq("id", vinculoId);
+  if (vinculoError) throw new Error(vinculoError.message);
+
+  const { error: jogadorError } = await supabase
+    .from("jogadores")
+    .update({ user_id: userId })
+    .eq("id", jogadorId);
+  if (jogadorError) throw new Error(jogadorError.message);
+}
+
+export async function dbRejeitarVinculo(vinculoId: string): Promise<void> {
+  const { error } = await getSupabase()
+    .from("vinculos_pendentes")
+    .delete()
+    .eq("id", vinculoId);
   if (error) throw new Error(error.message);
 }
