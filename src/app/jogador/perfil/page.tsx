@@ -81,7 +81,7 @@ export default function JogadorPerfilPage() {
 
       const userMeta = await getUser();
       const nomeUsuario = userMeta?.user_metadata?.nome ?? "";
-      await solicitarVinculo(racha.id, userId, userEmail, userNome);
+      await solicitarVinculo(racha.id, userId, userEmail, nomeUsuario);
       setSucessoVinculo(
         `Pedido enviado para o racha "${racha.nome}"! O admin irá aprovar em breve.`,
       );
