@@ -17,6 +17,7 @@ export default function JogadorPerfilPage() {
   const [jogadores, setJogadores] = useState<(Jogador & { racha?: any })[]>([]);
   const [userId, setUserId] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [userNome, setUserNome] = useState(""); // <- aqui
   const [loading, setLoading] = useState(true);
 
   // Vínculo
@@ -41,7 +42,6 @@ export default function JogadorPerfilPage() {
       }
       setUserId(user.id);
       setUserEmail(user.email ?? "");
-      const [userNome, setUserNome] = useState("");
       const data = await buscarJogadoresPorUserId(user.id);
       setJogadores(data);
     } finally {

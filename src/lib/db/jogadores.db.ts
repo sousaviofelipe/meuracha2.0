@@ -97,10 +97,22 @@ export async function dbBuscarJogadorPorUserId(
 ): Promise<Jogador[]> {
   const { data, error } = await getSupabase()
     .from("jogadores")
-    .select("*, racha:rachas(id, nome, codigo)")
+    .select("*")
     .eq("user_id", userId);
   if (error) throw new Error(error.message);
-  return data ?? [];
+  if (!data || data.length === 0) return [];
+
+  // Busca os rachas separadamente para evitar problema de RLS no join
+  const rachaIds = [...new Set(data.map((j) => j.racha_id))];
+  const { data: rachas } = await getSupabase()
+    .from("rachas")
+    .select("id, nome, codigo")
+    .in("id", rachaIds);
+
+  return data.map((j) => ({
+    ...j,
+    racha: rachas?.find((r) => r.id === j.racha_id) ?? null,
+  }));
 }
 
 export async function dbBuscarJogadorPorEmail(
