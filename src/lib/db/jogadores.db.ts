@@ -109,9 +109,9 @@ export async function dbBuscarJogadorPorUserId(
     .select("id, nome, codigo")
     .in("id", rachaIds);
 
-  return data.map((j) => ({
+  return data.map((j: any) => ({
     ...j,
-    racha: rachas?.find((r) => r.id === j.racha_id) ?? null,
+    racha: rachas?.find((r: any) => r.id === j.racha_id) ?? null,
   }));
 }
 
