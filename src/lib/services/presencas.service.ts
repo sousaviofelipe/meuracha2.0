@@ -103,7 +103,10 @@ export function agruparPresencas(
   const confirmados = presencas.filter((p) => p.confirmado);
   const ausencias = presencas.filter((p) => !p.confirmado && p.motivo);
   const idsComResposta = new Set(presencas.map((p) => p.jogador_id));
-  const semResposta = todosJogadores.filter((j) => !idsComResposta.has(j.id));
+  // Jogadores bloqueados não aparecem em "sem resposta"
+  const semResposta = todosJogadores.filter(
+    (j) => !idsComResposta.has(j.id) && !j.bloqueado,
+  );
 
   return { confirmados, ausencias, semResposta };
 }

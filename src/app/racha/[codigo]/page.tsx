@@ -1024,6 +1024,17 @@ export default function DashboardPublicoPage() {
           </Link>
         )}
 
+        {jogadorLogado && (
+          <div className="text-center">
+            <Link
+              href={`/racha/${codigo}/avaliar`}
+              className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-yellow-500/20 transition-colors"
+            >
+              ⭐ Avaliar jogadores
+            </Link>
+          </div>
+        )}
+
         <div className="text-center pt-2">
           <Link
             href="/instalar"

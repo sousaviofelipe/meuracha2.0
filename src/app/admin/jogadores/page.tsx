@@ -380,6 +380,12 @@ export default function JogadoresPage() {
                     {j.email}
                   </p>
                 )}
+
+                {j.nivel_medio !== null && j.nivel_medio !== undefined && (
+                  <p className="text-yellow-400 text-xs mt-0.5">
+                    ⭐ {j.nivel_medio}
+                  </p>
+                )}
                 {!j.mensalista && (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-500 mt-1 inline-block">
                     Não mensalista

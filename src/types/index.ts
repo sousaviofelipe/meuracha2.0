@@ -28,6 +28,7 @@ export interface Jogador {
   email?: string;
   user_id?: string;
   bloqueado: boolean;
+  nivel_medio?: number | null;
   criado_em: string;
 }
 
@@ -165,4 +166,27 @@ export interface VinculoPendente {
   usuario_nome?: string; // <- adicionar aqui
   criado_em: string;
   jogador?: Jogador;
+}
+
+export interface Avaliacao {
+  id: string;
+  racha_id: string;
+  avaliador_id: string;
+  jogador_id: string;
+  nota: number;
+  criado_em: string;
+  atualizado_em: string;
+}
+
+export interface JogadorComNivel extends Jogador {
+  nivel_medio?: number | null;
+  total_partidas?: number;
+  avaliacao_do_usuario?: number | null;
+}
+
+export interface EscalacaoGerada {
+  time_a: JogadorComNivel[];
+  time_b: JogadorComNivel[];
+  nome_time_a: string;
+  nome_time_b: string;
 }
