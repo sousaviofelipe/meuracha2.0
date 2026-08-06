@@ -15,7 +15,8 @@ import {
   dbVotarPublico,
   dbDesvotarPublico,
 } from "@/lib/db/publico.db";
-import { getUser } from "@/lib/services/auth.service";
+import { dbListarTotalPartidas } from "@/lib/db/avaliacoes.db";
+import { getUser, signOut } from "@/lib/services/auth.service";
 import { buscarJogadoresPorUserId } from "@/lib/services/jogadores.service";
 import {
   listarPresencas,
@@ -45,6 +46,7 @@ export default function DashboardPublicoPage() {
   const [jogadoresPublico, setJogadoresPublico] = useState<Jogador[]>([]);
   const [todosJogadores, setTodosJogadores] = useState<Jogador[]>([]);
   const params = useParams();
+  const router = useRouter();
   const codigo = params.codigo as string;
   const [racha, setRacha] = useState<Racha | null>(null);
   const [stats, setStats] = useState<Estatistica[]>([]);
@@ -62,6 +64,12 @@ export default function DashboardPublicoPage() {
   const [presencas, setPresencas] = useState<Presenca[]>([]);
   const [partidasFuturas, setPartidasFuturas] = useState<Partida[]>([]);
   const [salvandoPresenca, setSalvandoPresenca] = useState<string | null>(null);
+  const [saindo, setSaindo] = useState(false);
+
+  // Modal perfil do jogador
+  const [modalPerfil, setModalPerfil] = useState(false);
+  const [statJogador, setStatJogador] = useState<Estatistica | null>(null);
+  const [totalJogos, setTotalJogos] = useState(0);
 
   // Modal de detalhes da partida
   const [modalPartida, setModalPartida] = useState<Partida | null>(null);
@@ -93,7 +101,6 @@ export default function DashboardPublicoPage() {
       setUltimaPartida(p);
       setEscalacao(esc);
 
-      // Carrega jogadores da escalação
       if (
         esc &&
         (esc.jogadores_time_a?.length > 0 || esc.jogadores_time_b?.length > 0)
@@ -113,7 +120,6 @@ export default function DashboardPublicoPage() {
         }
       }
 
-      // Carrega todos os jogadores ativos do racha (para grupos de presença)
       const { data: todosJogs } = await getSupabase()
         .from("jogadores")
         .select("*")
@@ -121,7 +127,6 @@ export default function DashboardPublicoPage() {
         .eq("ativo", true);
       setTodosJogadores(todosJogs ?? []);
 
-      // Carrega financeiro
       const { data: jogs } = await getSupabase()
         .from("jogadores")
         .select("*")
@@ -135,7 +140,6 @@ export default function DashboardPublicoPage() {
       setJogadoresFinanceiro(jogs ?? []);
       setPagamentosPublico(pags ?? []);
 
-      // Busca enquetes ativas
       const { data: enqs } = await getSupabase()
         .from("enquetes")
         .select(
@@ -146,7 +150,6 @@ export default function DashboardPublicoPage() {
         .order("criado_em", { ascending: false });
       setEnquetes(enqs ?? []);
 
-      // Busca partidas futuras
       const hoje = new Date().toISOString().split("T")[0];
       const { data: futuras } = await getSupabase()
         .from("partidas")
@@ -158,7 +161,6 @@ export default function DashboardPublicoPage() {
         .limit(3);
       setPartidasFuturas(futuras ?? []);
 
-      // Carrega votos salvos
       const votosSalvos: Record<string, string> = {};
       Object.keys(localStorage)
         .filter((k) => k.startsWith("voto_enquete_"))
@@ -168,7 +170,6 @@ export default function DashboardPublicoPage() {
         });
       setVotos(votosSalvos);
 
-      // Verifica jogador logado
       try {
         const user = await getUser();
         if (user) {
@@ -186,20 +187,33 @@ export default function DashboardPublicoPage() {
               }
               setPresencas(todasPresencas);
             }
+            // Carrega stats do jogador logado
+            const statDoJogador = s.find(
+              (x) => x.jogador_id === jogadorDestePerfil.id,
+            );
+            setStatJogador(statDoJogador ?? null);
+            const partidas = await dbListarTotalPartidas(r.id);
+            const jogos =
+              partidas.find((p) => p.jogador_id === jogadorDestePerfil.id)
+                ?.total_partidas ?? 0;
+            setTotalJogos(jogos);
           } else {
             setUsuarioLogadoSemVinculo(true);
           }
         }
-      } catch {
-        // Não logado, ignora
-      }
+      } catch {}
 
       setLoading(false);
     }
     carregar();
   }, [codigo]);
 
-  // Abre modal de detalhes da partida
+  async function handleSair() {
+    setSaindo(true);
+    await signOut();
+    router.push("/login");
+  }
+
   async function abrirModalPartida(partida: Partida) {
     setModalPartida(partida);
     setCarregandoModal(true);
@@ -211,7 +225,6 @@ export default function DashboardPublicoPage() {
     }
   }
 
-  // Confirmar presença
   async function handleConfirmar(partidaId: string) {
     if (!jogadorLogado || salvandoPresenca) return;
     setSalvandoPresenca(partidaId);
@@ -237,7 +250,6 @@ export default function DashboardPublicoPage() {
           );
         return [...prev, novaPresenca];
       });
-      // Atualiza modal se estiver aberto
       if (modalPartida?.id === partidaId) {
         const p = await listarPresencas(partidaId);
         setModalPresencas(p);
@@ -247,7 +259,6 @@ export default function DashboardPublicoPage() {
     }
   }
 
-  // Salvar justificativa de falta
   async function handleSalvarFalta() {
     if (!jogadorLogado || !modalFalta || salvandoFalta) return;
     const motivo = motivoFalta === "outro" ? motivoCustom.trim() : motivoFalta;
@@ -388,45 +399,50 @@ export default function DashboardPublicoPage() {
           </div>
           <div className="flex items-center gap-3">
             {jogadorLogado ? (
-              <Link
-                href="/jogador/perfil"
-                className="flex items-center gap-2 bg-green-500/10 border border-green-500/30 text-green-400 text-xs font-semibold px-3 py-1.5 rounded-xl hover:bg-green-500/20 transition-colors"
-              >
-                <div className="w-5 h-5 rounded-full bg-gray-700 overflow-hidden flex-shrink-0">
-                  {jogadorLogado.foto_url ? (
-                    <img
-                      src={jogadorLogado.foto_url}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="w-full h-full flex items-center justify-center text-xs">
-                      👤
-                    </span>
-                  )}
-                </div>
-                {jogadorLogado.nome.split(" ")[0]}
-              </Link>
+              <>
+                {/* Avatar — abre modal de perfil */}
+                <button
+                  onClick={() => setModalPerfil(true)}
+                  className="flex items-center gap-2 bg-green-500/10 border border-green-500/30 text-green-400 text-xs font-semibold px-3 py-1.5 rounded-xl hover:bg-green-500/20 transition-colors"
+                >
+                  <div className="w-5 h-5 rounded-full bg-gray-700 overflow-hidden flex-shrink-0">
+                    {jogadorLogado.foto_url ? (
+                      <img
+                        src={jogadorLogado.foto_url}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="w-full h-full flex items-center justify-center text-xs">
+                        👤
+                      </span>
+                    )}
+                  </div>
+                  {jogadorLogado.nome.split(" ")[0]}
+                </button>
+                {/* Botão sair */}
+                <button
+                  onClick={handleSair}
+                  disabled={saindo}
+                  className="text-gray-500 hover:text-red-400 text-xs transition-colors disabled:opacity-50"
+                >
+                  {saindo ? "..." : "Sair"}
+                </button>
+              </>
             ) : (
               <Link
-                href={`/login`}
+                href="/login"
                 className="text-gray-500 hover:text-green-400 text-xs transition-colors font-semibold"
               >
                 Entrar →
               </Link>
             )}
-            <Link
-              href="/login"
-              className="text-gray-600 hover:text-gray-400 text-xs transition-colors"
-            >
-              Admin
-            </Link>
           </div>
         </div>
       </header>
 
       <main className="max-w-2xl mx-auto p-4 flex flex-col gap-5 pb-10">
-        {/* Notificação — só para jogador logado e vinculado */}
+        {/* Notificação */}
         {jogadorLogado && notificacao && (
           <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-1">
@@ -454,14 +470,12 @@ export default function DashboardPublicoPage() {
                 partida.data,
                 racha?.horario_limite_presenca ?? undefined,
               );
-              const podeAlterar = jogadorLogado && !bloqueado && !limitePasso;
 
               return (
                 <div
                   key={partida.id}
                   className="bg-gray-800 rounded-xl px-4 py-3 flex flex-col gap-2"
                 >
-                  {/* Info da partida — clicável para abrir modal */}
                   <button
                     onClick={() => abrirModalPartida(partida)}
                     className="flex items-center gap-3 w-full text-left"
@@ -486,11 +500,9 @@ export default function DashboardPublicoPage() {
                     </div>
                   </button>
 
-                  {/* Ações de presença */}
                   {jogadorLogado && (
                     <div className="flex gap-2">
                       {bloqueado ? (
-                        // Jogador bloqueado
                         racha?.whatsapp_diretoria ? (
                           <a
                             href={`https://wa.me/55${racha.whatsapp_diretoria}?text=${encodeURIComponent("Olá! Gostaria de falar sobre minha situação no racha.")}`}
@@ -506,7 +518,6 @@ export default function DashboardPublicoPage() {
                           </p>
                         )
                       ) : limitePasso ? (
-                        // Horário limite passou
                         <div className="flex-1 py-2 rounded-xl text-xs font-bold text-center bg-gray-700 text-gray-500 cursor-default">
                           {presenca?.confirmado
                             ? "✓ Confirmado"
@@ -515,16 +526,11 @@ export default function DashboardPublicoPage() {
                               : "⏰ Prazo encerrado"}
                         </div>
                       ) : (
-                        // Pode alterar
                         <>
                           <button
                             onClick={() => handleConfirmar(partida.id)}
                             disabled={!!carregando}
-                            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-50 ${
-                              presenca?.confirmado
-                                ? "bg-green-500/20 text-green-400 border border-green-500/40"
-                                : "bg-gray-700 text-gray-400 hover:bg-green-500/20 hover:text-green-400"
-                            }`}
+                            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-50 ${presenca?.confirmado ? "bg-green-500/20 text-green-400 border border-green-500/40" : "bg-gray-700 text-gray-400 hover:bg-green-500/20 hover:text-green-400"}`}
                           >
                             {carregando
                               ? "..."
@@ -539,13 +545,7 @@ export default function DashboardPublicoPage() {
                               setMotivoCustom("");
                             }}
                             disabled={!!carregando}
-                            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-50 ${
-                              presenca &&
-                              !presenca.confirmado &&
-                              presenca.motivo
-                                ? "bg-red-500/20 text-red-400 border border-red-500/40"
-                                : "bg-gray-700 text-gray-400 hover:bg-red-500/20 hover:text-red-400"
-                            }`}
+                            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-50 ${presenca && !presenca.confirmado && presenca.motivo ? "bg-red-500/20 text-red-400 border border-red-500/40" : "bg-gray-700 text-gray-400 hover:bg-red-500/20 hover:text-red-400"}`}
                           >
                             {presenca && !presenca.confirmado && presenca.motivo
                               ? `❌ ${presenca.motivo}`
@@ -558,7 +558,7 @@ export default function DashboardPublicoPage() {
 
                   {!jogadorLogado && (
                     <Link
-                      href={`/login`}
+                      href="/login"
                       className="block text-center py-2 rounded-xl text-xs font-bold bg-gray-700 text-gray-500 hover:text-green-400 transition-colors"
                     >
                       Entrar para confirmar
@@ -713,7 +713,7 @@ export default function DashboardPublicoPage() {
               <div className="mt-3 text-center">
                 {!podeVotar && (
                   <Link
-                    href={`/login`}
+                    href="/login"
                     className="text-blue-400 text-xs hover:underline"
                   >
                     Entre como jogador para votar →
@@ -1045,6 +1045,104 @@ export default function DashboardPublicoPage() {
         </div>
       </main>
 
+      {/* Modal perfil do jogador */}
+      {modalPerfil && jogadorLogado && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/70"
+          onClick={() => setModalPerfil(false)}
+        >
+          <div
+            className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-md p-6 flex flex-col gap-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-white font-black">Meu perfil</h2>
+              <button
+                onClick={() => setModalPerfil(false)}
+                className="text-gray-500 hover:text-white text-xl transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Foto + info */}
+            <div className="flex items-center gap-4">
+              <div className="w-20 h-20 rounded-full bg-gray-800 overflow-hidden flex-shrink-0 border-2 border-green-500/30">
+                {jogadorLogado.foto_url ? (
+                  <img
+                    src={jogadorLogado.foto_url}
+                    alt={jogadorLogado.nome}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-3xl">
+                    👤
+                  </div>
+                )}
+              </div>
+              <div>
+                <p className="text-white font-black text-lg">
+                  {jogadorLogado.nome}
+                </p>
+                <p className="text-gray-400 text-sm">{jogadorLogado.posicao}</p>
+                <p className="text-gray-500 text-xs mt-0.5">{racha?.nome}</p>
+              </div>
+            </div>
+
+            {/* Estatísticas */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-gray-800 rounded-xl p-3 text-center">
+                <p className="text-green-400 font-black text-2xl">
+                  {statJogador?.gols ?? 0}
+                </p>
+                <p className="text-gray-500 text-xs mt-0.5">⚽ Gols</p>
+              </div>
+              <div className="bg-gray-800 rounded-xl p-3 text-center">
+                <p className="text-blue-400 font-black text-2xl">
+                  {statJogador?.assistencias ?? 0}
+                </p>
+                <p className="text-gray-500 text-xs mt-0.5">🎯 Assistências</p>
+              </div>
+              <div className="bg-gray-800 rounded-xl p-3 text-center">
+                <p className="text-white font-black text-2xl">{totalJogos}</p>
+                <p className="text-gray-500 text-xs mt-0.5">🏟️ Jogos</p>
+              </div>
+              <div className="bg-gray-800 rounded-xl p-3 text-center">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-yellow-400 font-black text-xl">
+                    {statJogador?.cartoes_amarelos ?? 0}
+                  </span>
+                  <span className="text-gray-600 text-sm">|</span>
+                  <span className="text-red-400 font-black text-xl">
+                    {statJogador?.cartoes_vermelhos ?? 0}
+                  </span>
+                </div>
+                <p className="text-gray-500 text-xs mt-0.5">🟨 🟥 Cartões</p>
+              </div>
+            </div>
+
+            {/* Botões */}
+            <div className="flex gap-3">
+              <Link
+                href={`/racha/${codigo}/avaliar`}
+                onClick={() => setModalPerfil(false)}
+                className="flex-1 py-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm font-semibold text-center hover:bg-yellow-500/20 transition-colors"
+              >
+                ⭐ Avaliar jogadores
+              </Link>
+              <Link
+                href="/jogador/perfil"
+                onClick={() => setModalPerfil(false)}
+                className="flex-1 py-2.5 rounded-xl bg-gray-800 text-gray-400 text-sm font-semibold text-center hover:bg-gray-700 transition-colors"
+              >
+                Meus rachas →
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal detalhes da partida */}
       {modalPartida && (
         <div
@@ -1055,7 +1153,6 @@ export default function DashboardPublicoPage() {
             className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header do modal */}
             <div className="p-5 border-b border-gray-800 flex items-center justify-between flex-shrink-0">
               <div>
                 <p className="text-white font-black">
@@ -1076,8 +1173,6 @@ export default function DashboardPublicoPage() {
                 ✕
               </button>
             </div>
-
-            {/* Conteúdo */}
             <div className="overflow-y-auto p-5 flex flex-col gap-5">
               {carregandoModal ? (
                 <p className="text-gray-500 text-sm text-center animate-pulse">
@@ -1089,7 +1184,6 @@ export default function DashboardPublicoPage() {
                     agruparPresencas(modalPresencas, todosJogadores);
                   return (
                     <>
-                      {/* Confirmados */}
                       <div>
                         <p className="text-green-400 text-xs font-bold mb-2">
                           ✅ Confirmados ({confirmados.length})
@@ -1133,8 +1227,6 @@ export default function DashboardPublicoPage() {
                           </div>
                         )}
                       </div>
-
-                      {/* Ausências justificadas */}
                       {ausencias.length > 0 && (
                         <div>
                           <p className="text-red-400 text-xs font-bold mb-2">
@@ -1177,8 +1269,6 @@ export default function DashboardPublicoPage() {
                           </div>
                         </div>
                       )}
-
-                      {/* Sem resposta */}
                       {semResposta.length > 0 && (
                         <div>
                           <p className="text-gray-500 text-xs font-bold mb-2">
@@ -1245,8 +1335,6 @@ export default function DashboardPublicoPage() {
                 "pt-BR",
               )}
             </p>
-
-            {/* Motivos rápidos */}
             <div className="grid grid-cols-2 gap-2">
               {MOTIVOS_RAPIDOS.map((m) => (
                 <button
@@ -1264,8 +1352,6 @@ export default function DashboardPublicoPage() {
                 Outro motivo
               </button>
             </div>
-
-            {/* Campo livre */}
             {motivoFalta === "outro" && (
               <input
                 type="text"
@@ -1276,7 +1362,6 @@ export default function DashboardPublicoPage() {
                 className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 transition-colors"
               />
             )}
-
             <div className="flex gap-3">
               <button
                 onClick={() => setModalFalta(null)}
