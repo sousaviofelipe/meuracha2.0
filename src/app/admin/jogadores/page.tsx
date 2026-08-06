@@ -57,6 +57,8 @@ export default function JogadoresPage() {
   const [jogadorSelecionado, setJogadorSelecionado] = useState("");
   const [aprovando, setAprovando] = useState(false);
   const [erroVinculo, setErroVinculo] = useState("");
+  const [modalDeletar, setModalDeletar] = useState<Jogador | null>(null);
+  const [deletando, setDeletando] = useState(false);
 
   useEffect(() => {
     async function carregar() {
@@ -221,9 +223,21 @@ export default function JogadoresPage() {
   }
 
   async function handleDeletar(j: Jogador) {
-    if (!confirm(`Deletar ${j.nome}? Esta ação não pode ser desfeita.`)) return;
-    await deletarJogador(j.id);
-    setJogadores((prev) => prev.filter((x) => x.id !== j.id));
+    setModalDeletar(j);
+  }
+
+  async function confirmarDeletar() {
+    if (!modalDeletar) return;
+    setDeletando(true);
+    try {
+      await deletarJogador(modalDeletar.id);
+      setJogadores((prev) => prev.filter((x) => x.id !== modalDeletar.id));
+      setModalDeletar(null);
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setDeletando(false);
+    }
   }
 
   const jogadoresFiltrados = jogadores.filter((j) =>
@@ -608,6 +622,63 @@ export default function JogadoresPage() {
                 className="flex-1 py-3 rounded-xl bg-green-500 hover:bg-green-400 disabled:opacity-50 text-black font-bold transition-colors"
               >
                 {aprovando ? "Aprovando..." : "Aprovar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal confirmar exclusão */}
+      {modalDeletar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+          <div className="bg-gray-900 border border-red-500/30 rounded-2xl w-full max-w-md p-6 flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-2xl">⚠️</span>
+              </div>
+              <div>
+                <h2 className="text-white font-black text-lg">
+                  Excluir jogador
+                </h2>
+                <p className="text-red-400 text-sm font-semibold">
+                  {modalDeletar.nome}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex flex-col gap-2">
+              <p className="text-red-400 text-sm font-semibold">
+                ⚠️ Esta ação é irreversível!
+              </p>
+              <p className="text-gray-400 text-sm">
+                Ao excluir este jogador, os seguintes dados serão
+                permanentemente removidos:
+              </p>
+              <ul className="text-gray-400 text-sm flex flex-col gap-1 mt-1">
+                <li>• Estatísticas (gols, assistências, cartões)</li>
+                <li>• Histórico de pagamentos</li>
+                <li>• Presenças confirmadas</li>
+                <li>• Avaliações recebidas e dadas</li>
+                <li>• Eventos em partidas</li>
+              </ul>
+              <p className="text-gray-500 text-xs mt-2">
+                Se recadastrado, o jogador começará com todos os dados zerados.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setModalDeletar(null)}
+                className="flex-1 py-3 rounded-xl bg-gray-800 text-gray-400 hover:bg-gray-700 font-medium transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarDeletar}
+                disabled={deletando}
+                className="flex-1 py-3 rounded-xl bg-red-500 hover:bg-red-400 disabled:opacity-50 text-white font-bold transition-colors"
+              >
+                {deletando ? "Excluindo..." : "Excluir definitivamente"}
               </button>
             </div>
           </div>

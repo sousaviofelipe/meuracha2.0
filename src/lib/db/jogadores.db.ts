@@ -61,7 +61,9 @@ export async function dbToggleJogador(
 }
 
 export async function dbDeletarJogador(id: string): Promise<void> {
-  const { error } = await getSupabase().from("jogadores").delete().eq("id", id);
+  const { error } = await getSupabase().rpc("deletar_jogador_completo", {
+    p_jogador_id: id,
+  });
   if (error) throw new Error(error.message);
 }
 
