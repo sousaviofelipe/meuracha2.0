@@ -1215,7 +1215,7 @@ export default function DashboardPublicoPage() {
                 onClick={() => setModalPerfil(false)}
                 className="flex-1 py-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm font-semibold text-center hover:bg-yellow-500/20 transition-colors"
               >
-                ⭐ Avaliar jogadores
+                ⭐ Avaliar as lendas
               </Link>
               <Link
                 href="/jogador/perfil"
