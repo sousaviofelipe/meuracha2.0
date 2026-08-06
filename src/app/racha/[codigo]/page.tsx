@@ -1158,6 +1158,20 @@ export default function DashboardPublicoPage() {
               </div>
             </div>
 
+            {/* Nível médio — destaque */}
+            {jogadorLogado.nivel_medio !== null &&
+              jogadorLogado.nivel_medio !== undefined && (
+                <div className="bg-gray-800 rounded-xl p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-400 text-xs">Nível médio</p>
+                    <p className="text-yellow-400 font-black text-5xl mt-1">
+                      {jogadorLogado.nivel_medio}
+                    </p>
+                  </div>
+                  <span className="text-5xl">⭐</span>
+                </div>
+              )}
+
             {/* Estatísticas */}
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-gray-800 rounded-xl p-3 text-center">
