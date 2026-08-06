@@ -39,6 +39,7 @@ import {
 const MOTIVOS_RAPIDOS = ["Compromisso", "Lesão", "Viagem", "Trabalho"];
 
 export default function DashboardPublicoPage() {
+  const [rankingJogos, setRankingJogos] = useState<any[]>([]);
   const [estatutoUrl, setEstatutoUrl] = useState<string | null>(null);
   const [jogadoresFinanceiro, setJogadoresFinanceiro] = useState<any[]>([]);
   const [pagamentosPublico, setPagamentosPublico] = useState<any[]>([]);
@@ -126,6 +127,21 @@ export default function DashboardPublicoPage() {
         .eq("racha_id", r.id)
         .eq("ativo", true);
       setTodosJogadores(todosJogs ?? []);
+
+      const partidasMap = await dbListarTotalPartidas(r.id);
+      const partidasRanking = [...(todosJogs ?? [])]
+        .map((j: any) => ({
+          ...j,
+          total_partidas:
+            partidasMap.find((p) => p.jogador_id === j.id)?.total_partidas ?? 0,
+        }))
+        .filter((j: any) => j.total_partidas > 0)
+        .sort((a: any, b: any) =>
+          b.total_partidas !== a.total_partidas
+            ? b.total_partidas - a.total_partidas
+            : a.nome.localeCompare(b.nome),
+        );
+      setRankingJogos(partidasRanking);
 
       const { data: jogs } = await getSupabase()
         .from("jogadores")
@@ -876,6 +892,58 @@ export default function DashboardPublicoPage() {
                     </span>
                     <span className="text-blue-400 font-bold text-sm">
                       {s.assistencias} 🎯
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Link>
+
+        {/* Jogos disputados */}
+        <Link href={`/racha/${codigo}/jogos`}>
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 hover:border-gray-700 transition-colors cursor-pointer">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span>🏟️</span>
+                <span className="text-white font-bold">Jogos disputados</span>
+              </div>
+              <span className="text-gray-500 text-xs">ver todos →</span>
+            </div>
+            {rankingJogos.length === 0 ? (
+              <p className="text-gray-600 text-sm text-center py-2">
+                Nenhum jogo registrado
+              </p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {rankingJogos.slice(0, 5).map((j, i) => (
+                  <div key={j.id} className="flex items-center gap-3">
+                    <span
+                      className={`text-sm w-5 font-bold ${i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-400" : i === 2 ? "text-orange-400" : "text-gray-600"}`}
+                    >
+                      {i + 1}
+                    </span>
+                    <div className="w-7 h-7 rounded-full bg-gray-800 overflow-hidden flex-shrink-0">
+                      {j.foto_url ? (
+                        <img
+                          src={j.foto_url}
+                          alt=""
+                          style={{
+                            width: 28,
+                            height: 28,
+                            objectFit: "cover",
+                            display: "block",
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-xs">
+                          👤
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-white text-sm flex-1">{j.nome}</span>
+                    <span className="text-white font-bold text-sm">
+                      {j.total_partidas} 🏟️
                     </span>
                   </div>
                 ))}
