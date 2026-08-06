@@ -470,6 +470,17 @@ export default function DashboardPublicoPage() {
           </div>
         )}
 
+        {jogadorLogado && (
+          <div className="text-center">
+            <Link
+              href={`/racha/${codigo}/avaliar`}
+              className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-yellow-500/20 transition-colors"
+            >
+              ⭐ Avaliar jogadores
+            </Link>
+          </div>
+        )}
+
         {/* Próximas partidas */}
         {partidasFuturas.length > 0 && (
           <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 flex flex-col gap-3">
@@ -1090,17 +1101,6 @@ export default function DashboardPublicoPage() {
               <span className="text-gray-500 text-sm">→</span>
             </div>
           </Link>
-        )}
-
-        {jogadorLogado && (
-          <div className="text-center">
-            <Link
-              href={`/racha/${codigo}/avaliar`}
-              className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-yellow-500/20 transition-colors"
-            >
-              ⭐ Avaliar jogadores
-            </Link>
-          </div>
         )}
 
         <div className="text-center pt-2">

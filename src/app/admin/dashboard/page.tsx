@@ -12,6 +12,8 @@ import {
   dbGetEnqueteAtiva,
   dbGetUltimaPartida,
 } from "@/lib/db/rachas.db";
+import { dbListarTotalPartidas } from "@/lib/db/avaliacoes.db";
+import { getSupabase } from "@/lib/db/supabase";
 import { Racha, Estatistica, Notificacao, Enquete, Partida } from "@/types";
 
 export default function DashboardPage() {
@@ -21,6 +23,7 @@ export default function DashboardPage() {
   const [notificacao, setNotificacao] = useState<Notificacao | null>(null);
   const [enquete, setEnquete] = useState<Enquete | null>(null);
   const [ultimaPartida, setUltimaPartida] = useState<Partida | null>(null);
+  const [rankingJogos, setRankingJogos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,16 +35,39 @@ export default function DashboardPage() {
       if (!r) return router.push("/login");
       setRacha(r);
 
-      const [s, n, e, p] = await Promise.all([
+      const [s, n, e, p, partidas, { data: jogs }] = await Promise.all([
         dbGetEstatisticas(r.id),
         dbGetNotificacaoAtiva(r.id),
         dbGetEnqueteAtiva(r.id),
         dbGetUltimaPartida(r.id),
+        dbListarTotalPartidas(r.id),
+        getSupabase()
+          .from("jogadores")
+          .select("*")
+          .eq("racha_id", r.id)
+          .eq("ativo", true),
       ]);
+
       setStats(s);
       setNotificacao(n);
       setEnquete(e);
       setUltimaPartida(p);
+
+      const map: Record<string, number> = {};
+      partidas.forEach((p) => {
+        map[p.jogador_id] = p.total_partidas;
+      });
+
+      const ranking = (jogs ?? [])
+        .map((j: any) => ({ ...j, total_partidas: map[j.id] ?? 0 }))
+        .filter((j: any) => j.total_partidas > 0)
+        .sort((a: any, b: any) =>
+          b.total_partidas !== a.total_partidas
+            ? b.total_partidas - a.total_partidas
+            : a.nome.localeCompare(b.nome),
+        );
+      setRankingJogos(ranking);
+
       setLoading(false);
     }
     carregar();
@@ -53,9 +79,6 @@ export default function DashboardPage() {
     .slice(0, 10);
   const amarelos = [...stats]
     .sort((a, b) => b.cartoes_amarelos - a.cartoes_amarelos)
-    .slice(0, 10);
-  const vermelhos = [...stats]
-    .sort((a, b) => b.cartoes_vermelhos - a.cartoes_vermelhos)
     .slice(0, 10);
 
   if (loading) {
@@ -83,6 +106,7 @@ export default function DashboardPage() {
         </div>
         {racha && <CompartilharRacha racha={racha} />}
       </div>
+
       {/* Notificação */}
       {notificacao ? (
         <Link href="/admin/notificacoes">
@@ -106,6 +130,7 @@ export default function DashboardPage() {
           </div>
         </Link>
       )}
+
       {/* Enquete */}
       {enquete ? (
         <Link href="/admin/enquetes">
@@ -116,9 +141,7 @@ export default function DashboardPage() {
                 Enquete Ativa
               </span>
             </div>
-
             <p className="text-white font-semibold mb-3">{enquete.pergunta}</p>
-
             <div className="flex flex-col gap-2">
               {[...(enquete.opcoes ?? [])]
                 .sort((a, b) => b.votos - a.votos)
@@ -127,18 +150,14 @@ export default function DashboardPage() {
                     enquete.opcoes?.reduce((acc, o) => acc + o.votos, 0) ?? 0;
                   const pct =
                     total > 0 ? Math.round((op.votos / total) * 100) : 0;
-
                   return (
                     <div
                       key={op.id}
                       className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl bg-gray-800/70 border border-gray-700"
                     >
-                      {/* Nome */}
                       <span className="text-white text-sm flex-1 truncate">
                         {op.opcao}
                       </span>
-
-                      {/* Barra + % */}
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <div className="w-20 h-1.5 bg-gray-700 rounded-full overflow-hidden">
                           <div
@@ -165,6 +184,7 @@ export default function DashboardPage() {
           </div>
         </Link>
       )}
+
       {/* Última partida */}
       {ultimaPartida ? (
         <Link href="/admin/partidas">
@@ -202,6 +222,7 @@ export default function DashboardPage() {
           </div>
         </Link>
       )}
+
       {/* Artilheiros */}
       <Link href="/admin/estatisticas/artilheiros">
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 cursor-pointer hover:border-gray-700 transition-colors">
@@ -233,6 +254,7 @@ export default function DashboardPage() {
           )}
         </div>
       </Link>
+
       {/* Assistências */}
       <Link href="/admin/estatisticas/assistencias">
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 cursor-pointer hover:border-gray-700 transition-colors">
@@ -264,6 +286,37 @@ export default function DashboardPage() {
           )}
         </div>
       </Link>
+
+      {/* Jogos disputados */}
+      <Link href={`/racha/${racha?.codigo}/jogos`}>
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 cursor-pointer hover:border-gray-700 transition-colors">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span>🏟️</span>
+              <span className="text-white font-bold">Jogos disputados</span>
+            </div>
+            <span className="text-gray-500 text-xs">ver todos →</span>
+          </div>
+          {rankingJogos.length === 0 ? (
+            <p className="text-gray-600 text-sm text-center py-2">
+              Nenhum jogo registrado
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {rankingJogos.slice(0, 5).map((j, i) => (
+                <div key={j.id} className="flex items-center gap-3">
+                  <span className="text-gray-500 text-sm w-4">{i + 1}</span>
+                  <span className="text-white text-sm flex-1">{j.nome}</span>
+                  <span className="text-white font-bold text-sm">
+                    {j.total_partidas} 🏟️
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Link>
+
       {/* Cartões */}
       <Link href="/admin/estatisticas/cartoes">
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 cursor-pointer hover:border-gray-700 transition-colors">
