@@ -1134,43 +1134,47 @@ export default function DashboardPublicoPage() {
               </button>
             </div>
 
-            {/* Foto + info */}
+            {/* Foto + info + nível */}
             <div className="flex items-center gap-4">
-              <div className="w-20 h-20 rounded-full bg-gray-800 overflow-hidden flex-shrink-0 border-2 border-green-500/30">
-                {jogadorLogado.foto_url ? (
-                  <img
-                    src={jogadorLogado.foto_url}
-                    alt={jogadorLogado.nome}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-3xl">
-                    👤
-                  </div>
-                )}
+              <div className="relative flex-shrink-0">
+                <div className="w-20 h-20 rounded-full bg-gray-800 overflow-hidden border-2 border-green-500/30">
+                  {jogadorLogado.foto_url ? (
+                    <img
+                      src={jogadorLogado.foto_url}
+                      alt={jogadorLogado.nome}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-3xl">
+                      👤
+                    </div>
+                  )}
+                </div>
+                {jogadorLogado.nivel_medio !== null &&
+                  jogadorLogado.nivel_medio !== undefined && (
+                    <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black text-xs font-black px-1.5 py-0.5 rounded-full leading-none">
+                      {jogadorLogado.nivel_medio}
+                    </div>
+                  )}
               </div>
-              <div>
-                <p className="text-white font-black text-lg">
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-black text-lg truncate">
                   {jogadorLogado.nome}
                 </p>
                 <p className="text-gray-400 text-sm">{jogadorLogado.posicao}</p>
                 <p className="text-gray-500 text-xs mt-0.5">{racha?.nome}</p>
+                {jogadorLogado.nivel_medio !== null &&
+                  jogadorLogado.nivel_medio !== undefined && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <span className="text-yellow-400 text-xs">⭐</span>
+                      <span className="text-yellow-400 text-xs font-bold">
+                        Nível {jogadorLogado.nivel_medio}
+                      </span>
+                      <span className="text-gray-600 text-xs">/ 10</span>
+                    </div>
+                  )}
               </div>
             </div>
-
-            {/* Nível médio — destaque */}
-            {jogadorLogado.nivel_medio !== null &&
-              jogadorLogado.nivel_medio !== undefined && (
-                <div className="bg-gray-800 rounded-xl p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-400 text-xs">Nível médio</p>
-                    <p className="text-yellow-400 font-black text-5xl mt-1">
-                      {jogadorLogado.nivel_medio}
-                    </p>
-                  </div>
-                  <span className="text-5xl">⭐</span>
-                </div>
-              )}
 
             {/* Estatísticas */}
             <div className="grid grid-cols-2 gap-3">
