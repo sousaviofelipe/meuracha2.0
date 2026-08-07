@@ -8,24 +8,26 @@ import {
   dbGetEstatisticasPublico,
 } from "@/lib/db/publico.db";
 import { dbListarTotalPartidas } from "@/lib/db/avaliacoes.db";
-import { Estatistica } from "@/types";
+import { Estatistica, Racha } from "@/types";
+import ModalJogador from "@/components/ModalJogador";
 
 export default function AssistenciasPage() {
   const params = useParams();
   const codigo = params.codigo as string;
 
+  const [racha, setRacha] = useState<Racha | null>(null);
   const [stats, setStats] = useState<Estatistica[]>([]);
   const [totalPartidas, setTotalPartidas] = useState<Record<string, number>>(
     {},
   );
   const [loading, setLoading] = useState(true);
-  const [nomRacha, setNomRacha] = useState("");
+  const [jogadorModalId, setJogadorModalId] = useState<string | null>(null);
 
   useEffect(() => {
     async function carregar() {
       const r = await dbGetRachaPorCodigo(codigo);
       if (!r) return;
-      setNomRacha(r.nome);
+      setRacha(r);
 
       const [s, partidas] = await Promise.all([
         dbGetEstatisticasPublico(r.id),
@@ -61,7 +63,7 @@ export default function AssistenciasPage() {
           </Link>
           <div>
             <h1 className="text-white font-black">🎯 Assistências</h1>
-            <p className="text-gray-500 text-xs">{nomRacha}</p>
+            <p className="text-gray-500 text-xs">{racha?.nome}</p>
           </div>
         </div>
       </header>
@@ -99,9 +101,10 @@ export default function AssistenciasPage() {
             const jogos = totalPartidas[s.jogador_id] ?? 0;
 
             return (
-              <div
+              <button
                 key={s.id}
-                className={`border rounded-2xl px-4 py-3 flex items-center gap-3 transition-all hover:scale-[1.02] hover:shadow-lg ${destaque}`}
+                onClick={() => setJogadorModalId(s.jogador_id)}
+                className={`border rounded-2xl px-4 py-3 flex items-center gap-3 transition-all hover:scale-[1.02] hover:shadow-lg w-full text-left ${destaque}`}
               >
                 <div className="flex items-center gap-1 w-10">
                   <span className={`text-lg font-black ${corPosicao}`}>
@@ -148,11 +151,17 @@ export default function AssistenciasPage() {
                   </span>
                   <span className="text-blue-400 text-sm">🎯</span>
                 </div>
-              </div>
+              </button>
             );
           })
         )}
       </main>
+
+      <ModalJogador
+        jogadorId={jogadorModalId}
+        rachaId={racha?.id ?? ""}
+        onClose={() => setJogadorModalId(null)}
+      />
     </div>
   );
 }

@@ -124,3 +124,14 @@ export async function dbVotarPublico(opcaoId: string): Promise<void> {
   });
   if (error) throw new Error(error.message);
 }
+
+export async function dbGetEstatisticasJogador(
+  jogadorId: string,
+): Promise<Estatistica | null> {
+  const { data } = await getSupabase()
+    .from("estatisticas")
+    .select("*, jogador:jogadores(id, nome, posicao, foto_url, nivel_medio)")
+    .eq("jogador_id", jogadorId)
+    .maybeSingle();
+  return data ?? null;
+}
