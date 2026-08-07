@@ -12,6 +12,7 @@ import {
   dbAtualizarConfiguracoes,
 } from "@/lib/db/rachas.db";
 import { dbAtualizarFinanceiro } from "@/lib/db/financeiro.db";
+import { dbAtualizarBalancoPublico } from "@/lib/db/gastos.db";
 import { Racha } from "@/types";
 
 export default function ConfiguracoesPage() {
@@ -47,6 +48,9 @@ export default function ConfiguracoesPage() {
   // Configurações de presença
   const [whatsappDiretoria, setWhatsappDiretoria] = useState("");
   const [horarioLimite, setHorarioLimite] = useState("");
+  const [balancoPublico, setBalancoPublico] = useState(false);
+  const [salvandoBalanco, setSalvandoBalanco] = useState(false);
+  const [sucessoBalanco, setSucessoBalanco] = useState(false);
 
   useEffect(() => {
     async function carregar() {
@@ -65,6 +69,7 @@ export default function ConfiguracoesPage() {
       setEstatutoUrl((r as any).estatuto_url ?? "");
       setWhatsappDiretoria(r.whatsapp_diretoria ?? "");
       setHorarioLimite(r.horario_limite_presenca ?? "");
+      setBalancoPublico(r.balanco_publico ?? false);
       setLoading(false);
     }
     carregar();
@@ -175,6 +180,21 @@ export default function ConfiguracoesPage() {
       setErroConfig(err.message);
     } finally {
       setSalvandoConfig(false);
+    }
+  }
+
+  async function handleToggleBalancoPublico() {
+    if (!racha) return;
+    setSalvandoBalanco(true);
+    try {
+      const novo = !balancoPublico;
+      await dbAtualizarBalancoPublico(racha.id, novo);
+      setBalancoPublico(novo);
+      setRacha((prev) => (prev ? { ...prev, balanco_publico: novo } : prev));
+      setSucessoBalanco(true);
+      setTimeout(() => setSucessoBalanco(false), 2000);
+    } finally {
+      setSalvandoBalanco(false);
     }
   }
 
@@ -325,10 +345,9 @@ export default function ConfiguracoesPage() {
         </button>
       </div>
 
-      {/* Card Configurações de Presença */}
+      {/* Card Configurações */}
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 flex flex-col gap-5">
         <h2 className="text-white font-bold">📅 Confirmação de Presença</h2>
-
         <div className="flex flex-col gap-2">
           <label className="text-gray-400 text-sm font-medium">
             WhatsApp da diretoria
@@ -349,7 +368,6 @@ export default function ConfiguracoesPage() {
             este número.
           </p>
         </div>
-
         <div className="flex flex-col gap-2">
           <label className="text-gray-400 text-sm font-medium">
             Horário limite para confirmações
@@ -365,7 +383,6 @@ export default function ConfiguracoesPage() {
             ou alterar presença.
           </p>
         </div>
-
         {erroConfig && <p className="text-red-400 text-sm">{erroConfig}</p>}
         {sucessoConfig && (
           <p className="text-green-400 text-sm">✅ Configurações salvas!</p>
@@ -377,6 +394,36 @@ export default function ConfiguracoesPage() {
         >
           {salvandoConfig ? "Salvando..." : "Salvar configurações"}
         </button>
+      </div>
+
+      {/* Card Visibilidade */}
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 flex flex-col gap-5">
+        <h2 className="text-white font-bold">👁️ Visibilidade</h2>
+
+        {/* Toggle balanço público */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1">
+            <p className="text-white text-sm font-semibold">
+              Exibir balanço financeiro
+            </p>
+            <p className="text-gray-500 text-xs mt-0.5">
+              Jogadores logados e vinculados poderão ver o saldo do caixa no
+              dashboard.
+            </p>
+          </div>
+          <button
+            onClick={handleToggleBalancoPublico}
+            disabled={salvandoBalanco}
+            className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 disabled:opacity-50 ${balancoPublico ? "bg-green-500" : "bg-gray-700"}`}
+          >
+            <div
+              className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${balancoPublico ? "translate-x-6" : "translate-x-0.5"}`}
+            />
+          </button>
+        </div>
+        {sucessoBalanco && (
+          <p className="text-green-400 text-sm">✅ Visibilidade atualizada!</p>
+        )}
       </div>
 
       {/* Card Estatuto */}

@@ -115,6 +115,7 @@ export interface Pagamento {
   mes: number;
   ano: number;
   pago: boolean;
+  status: "pendente" | "aguardando" | "confirmado";
   pago_em?: string;
   criado_em: string;
 }
@@ -189,4 +190,40 @@ export interface EscalacaoGerada {
   time_b: JogadorComNivel[];
   nome_time_a: string;
   nome_time_b: string;
+}
+export interface PagamentoJogador {
+  jogador: Jogador;
+  pagamentos: Pagamento[];
+  mesesAtraso: number;
+  totalDevido: number;
+}
+export interface Racha {
+  id: string;
+  admin_id: string;
+  nome: string;
+  codigo: string;
+  descricao?: string;
+  whatsapp_diretoria?: string;
+  horario_limite_presenca?: string;
+  balanco_publico?: boolean; // <- adicionar aqui
+  criado_em: string;
+}
+
+export type CategoriaGasto =
+  | "campo"
+  | "arbitragem"
+  | "agua"
+  | "farmacia"
+  | "outros";
+
+export interface Gasto {
+  id: string;
+  racha_id: string;
+  categoria: CategoriaGasto;
+  descricao?: string;
+  valor: number;
+  dia?: number;
+  mes: number;
+  ano: number;
+  criado_em: string;
 }
