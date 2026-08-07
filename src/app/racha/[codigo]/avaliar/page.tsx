@@ -12,6 +12,8 @@ import {
 import { dbGetRachaPorCodigo } from "@/lib/db/publico.db";
 import { JogadorComNivel, Racha } from "@/types";
 
+type Ordenacao = "alfabetica" | "nivel_medio" | "minha_nota";
+
 export default function AvaliarPage() {
   const params = useParams();
   const router = useRouter();
@@ -27,6 +29,7 @@ export default function AvaliarPage() {
   const [notasLocais, setNotasLocais] = useState<Record<string, string>>({});
   const [sucessos, setSucessos] = useState<Record<string, boolean>>({});
   const [erros, setErros] = useState<Record<string, string>>({});
+  const [ordenacao, setOrdenacao] = useState<Ordenacao>("alfabetica");
 
   useEffect(() => {
     async function carregar() {
@@ -53,7 +56,6 @@ export default function AvaliarPage() {
         setJogadorLogado(jogadorDestePerfil as JogadorComNivel);
         setJogadores(semEuMesmo);
 
-        // Pré-preenche notas já dadas
         const notas: Record<string, string> = {};
         semEuMesmo.forEach((j) => {
           if (
@@ -97,8 +99,6 @@ export default function AvaliarPage() {
         () => setSucessos((prev) => ({ ...prev, [jogadorId]: false })),
         2000,
       );
-
-      // Atualiza o nível médio localmente
       setJogadores((prev) =>
         prev.map((j) =>
           j.id === jogadorId ? { ...j, avaliacao_do_usuario: nota } : j,
@@ -112,11 +112,29 @@ export default function AvaliarPage() {
   }
 
   function handleNota(jogadorId: string, valor: string) {
-    // Permite apenas números e vírgula/ponto
     const limpo = valor.replace(/[^0-9.,]/g, "");
     setNotasLocais((prev) => ({ ...prev, [jogadorId]: limpo }));
     setSucessos((prev) => ({ ...prev, [jogadorId]: false }));
   }
+
+  const jogadoresOrdenados = [...jogadores].sort((a, b) => {
+    if (ordenacao === "alfabetica") {
+      return a.nome.localeCompare(b.nome);
+    }
+    if (ordenacao === "nivel_medio") {
+      const nivelA = a.nivel_medio ?? -1;
+      const nivelB = b.nivel_medio ?? -1;
+      if (nivelB !== nivelA) return nivelB - nivelA;
+      return a.nome.localeCompare(b.nome);
+    }
+    if (ordenacao === "minha_nota") {
+      const notaA = a.avaliacao_do_usuario ?? -1;
+      const notaB = b.avaliacao_do_usuario ?? -1;
+      if (notaB !== notaA) return notaB - notaA;
+      return a.nome.localeCompare(b.nome);
+    }
+    return 0;
+  });
 
   if (loading) {
     return (
@@ -157,8 +175,30 @@ export default function AvaliarPage() {
           </p>
         </div>
 
+        {/* Ordenação */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setOrdenacao("alfabetica")}
+            className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-colors ${ordenacao === "alfabetica" ? "bg-green-500 text-black" : "bg-gray-900 border border-gray-800 text-gray-400 hover:bg-gray-800"}`}
+          >
+            A→Z
+          </button>
+          <button
+            onClick={() => setOrdenacao("nivel_medio")}
+            className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-colors ${ordenacao === "nivel_medio" ? "bg-green-500 text-black" : "bg-gray-900 border border-gray-800 text-gray-400 hover:bg-gray-800"}`}
+          >
+            ⭐ Nível médio
+          </button>
+          <button
+            onClick={() => setOrdenacao("minha_nota")}
+            className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-colors ${ordenacao === "minha_nota" ? "bg-green-500 text-black" : "bg-gray-900 border border-gray-800 text-gray-400 hover:bg-gray-800"}`}
+          >
+            📝 Minha nota
+          </button>
+        </div>
+
         {/* Lista de jogadores */}
-        {jogadores.map((j) => {
+        {jogadoresOrdenados.map((j) => {
           const jaAvaliou =
             j.avaliacao_do_usuario !== null &&
             j.avaliacao_do_usuario !== undefined;
@@ -189,13 +229,21 @@ export default function AvaliarPage() {
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <p className="text-white font-bold truncate">{j.nome}</p>
-                <div className="flex items-center gap-2 mt-0.5">
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   <span className="text-gray-500 text-xs">{j.posicao}</span>
                   {j.nivel_medio !== null && j.nivel_medio !== undefined && (
                     <>
                       <span className="text-gray-700 text-xs">·</span>
                       <span className="text-yellow-400 text-xs font-bold">
                         ⭐ {j.nivel_medio}
+                      </span>
+                    </>
+                  )}
+                  {jaAvaliou && (
+                    <>
+                      <span className="text-gray-700 text-xs">·</span>
+                      <span className="text-blue-400 text-xs">
+                        📝 {j.avaliacao_do_usuario}
                       </span>
                     </>
                   )}
