@@ -105,7 +105,10 @@ export async function dbGetBalanco(
 
   const mensalidade = (rachaData as any)?.mensalidade ?? 0;
   const totalArrecadado = (pags ?? []).length * mensalidade;
-  const totalGastos = (gastos ?? []).reduce((acc, g) => acc + g.valor, 0);
+  const totalGastos = (gastos ?? []).reduce(
+    (acc: number, g: any) => acc + g.valor,
+    0,
+  );
   const saldo = totalArrecadado - totalGastos;
 
   return { totalArrecadado, totalGastos, saldo };
