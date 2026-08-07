@@ -4,6 +4,7 @@ import { getMesesRecentes, calcularAtraso } from "@/lib/utils/meses";
 import { getSupabase } from "@/lib/db/supabase";
 import { dbGetEscalacaoAtivaPublico } from "@/lib/db/publico.db";
 import CampoEscalacao from "@/components/CampoEscalacao";
+import ModalJogador from "@/components/ModalJogador";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -15,7 +16,10 @@ import {
   dbVotarPublico,
   dbDesvotarPublico,
 } from "@/lib/db/publico.db";
-import { dbListarTotalPartidas } from "@/lib/db/avaliacoes.db";
+import {
+  dbListarTotalPartidas,
+  dbListarJogadoresComNivel,
+} from "@/lib/db/avaliacoes.db";
 import { getUser, signOut } from "@/lib/services/auth.service";
 import { buscarJogadoresPorUserId } from "@/lib/services/jogadores.service";
 import {
@@ -34,18 +38,20 @@ import {
   Escalacao,
   Jogador,
   Presenca,
+  JogadorComNivel,
 } from "@/types";
 
 const MOTIVOS_RAPIDOS = ["Compromisso", "Lesão", "Viagem", "Trabalho"];
 
 export default function DashboardPublicoPage() {
-  const [rankingJogos, setRankingJogos] = useState<any[]>([]);
   const [estatutoUrl, setEstatutoUrl] = useState<string | null>(null);
   const [jogadoresFinanceiro, setJogadoresFinanceiro] = useState<any[]>([]);
   const [pagamentosPublico, setPagamentosPublico] = useState<any[]>([]);
   const [escalacao, setEscalacao] = useState<Escalacao | null>(null);
   const [jogadoresPublico, setJogadoresPublico] = useState<Jogador[]>([]);
   const [todosJogadores, setTodosJogadores] = useState<Jogador[]>([]);
+  const [rankingJogos, setRankingJogos] = useState<any[]>([]);
+  const [rankingNivel, setRankingNivel] = useState<JogadorComNivel[]>([]);
   const params = useParams();
   const router = useRouter();
   const codigo = params.codigo as string;
@@ -67,10 +73,13 @@ export default function DashboardPublicoPage() {
   const [salvandoPresenca, setSalvandoPresenca] = useState<string | null>(null);
   const [saindo, setSaindo] = useState(false);
 
-  // Modal perfil do jogador
+  // Modal perfil do jogador logado
   const [modalPerfil, setModalPerfil] = useState(false);
   const [statJogador, setStatJogador] = useState<Estatistica | null>(null);
   const [totalJogos, setTotalJogos] = useState(0);
+
+  // Modal jogador genérico
+  const [jogadorModalId, setJogadorModalId] = useState<string | null>(null);
 
   // Modal de detalhes da partida
   const [modalPartida, setModalPartida] = useState<Partida | null>(null);
@@ -128,21 +137,6 @@ export default function DashboardPublicoPage() {
         .eq("ativo", true);
       setTodosJogadores(todosJogs ?? []);
 
-      const partidasMap = await dbListarTotalPartidas(r.id);
-      const partidasRanking = [...(todosJogs ?? [])]
-        .map((j: any) => ({
-          ...j,
-          total_partidas:
-            partidasMap.find((p) => p.jogador_id === j.id)?.total_partidas ?? 0,
-        }))
-        .filter((j: any) => j.total_partidas > 0)
-        .sort((a: any, b: any) =>
-          b.total_partidas !== a.total_partidas
-            ? b.total_partidas - a.total_partidas
-            : a.nome.localeCompare(b.nome),
-        );
-      setRankingJogos(partidasRanking);
-
       const { data: jogs } = await getSupabase()
         .from("jogadores")
         .select("*")
@@ -177,6 +171,30 @@ export default function DashboardPublicoPage() {
         .limit(3);
       setPartidasFuturas(futuras ?? []);
 
+      // Ranking de jogos
+      const partidasMap = await dbListarTotalPartidas(r.id);
+      const map: Record<string, number> = {};
+      partidasMap.forEach((p) => {
+        map[p.jogador_id] = p.total_partidas;
+      });
+      const ranking = (todosJogs ?? [])
+        .map((j: any) => ({ ...j, total_partidas: map[j.id] ?? 0 }))
+        .filter((j: any) => j.total_partidas > 0)
+        .sort((a: any, b: any) =>
+          b.total_partidas !== a.total_partidas
+            ? b.total_partidas - a.total_partidas
+            : a.nome.localeCompare(b.nome),
+        );
+      setRankingJogos(ranking);
+
+      // Ranking de nível
+      const nivel = await dbListarJogadoresComNivel(r.id);
+      const nivelFiltrado = nivel
+        .filter((j) => j.nivel_medio !== null && j.nivel_medio !== undefined)
+        .sort((a, b) => (b.nivel_medio ?? 0) - (a.nivel_medio ?? 0));
+      setRankingNivel(nivelFiltrado);
+
+      // Votos salvos
       const votosSalvos: Record<string, string> = {};
       Object.keys(localStorage)
         .filter((k) => k.startsWith("voto_enquete_"))
@@ -186,6 +204,7 @@ export default function DashboardPublicoPage() {
         });
       setVotos(votosSalvos);
 
+      // Jogador logado
       try {
         const user = await getUser();
         if (user) {
@@ -203,15 +222,11 @@ export default function DashboardPublicoPage() {
               }
               setPresencas(todasPresencas);
             }
-            // Carrega stats do jogador logado
             const statDoJogador = s.find(
               (x) => x.jogador_id === jogadorDestePerfil.id,
             );
             setStatJogador(statDoJogador ?? null);
-            const partidas = await dbListarTotalPartidas(r.id);
-            const jogos =
-              partidas.find((p) => p.jogador_id === jogadorDestePerfil.id)
-                ?.total_partidas ?? 0;
+            const jogos = map[jogadorDestePerfil.id] ?? 0;
             setTotalJogos(jogos);
           } else {
             setUsuarioLogadoSemVinculo(true);
@@ -358,11 +373,11 @@ export default function DashboardPublicoPage() {
   const artilheiros = [...stats]
     .sort((a, b) => b.gols - a.gols)
     .filter((s) => s.gols > 0)
-    .slice(0, 10);
+    .slice(0, 3);
   const assistentes = [...stats]
     .sort((a, b) => b.assistencias - a.assistencias)
     .filter((s) => s.assistencias > 0)
-    .slice(0, 10);
+    .slice(0, 3);
   const cartoes = [...stats]
     .sort(
       (a, b) =>
@@ -371,7 +386,7 @@ export default function DashboardPublicoPage() {
         (a.cartoes_amarelos + a.cartoes_vermelhos),
     )
     .filter((s) => s.cartoes_amarelos + s.cartoes_vermelhos > 0)
-    .slice(0, 10);
+    .slice(0, 3);
 
   if (loading && !notFound) {
     return (
@@ -399,6 +414,25 @@ export default function DashboardPublicoPage() {
     );
   }
 
+  // Componente de título de seção com destaque
+  const TituloSecao = ({
+    emoji,
+    titulo,
+  }: {
+    emoji: string;
+    titulo: string;
+  }) => (
+    <div className="flex items-center gap-2 mb-3">
+      <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center flex-shrink-0">
+        <span className="text-base">{emoji}</span>
+      </div>
+      <span className="text-white font-black text-base tracking-wide">
+        {titulo}
+      </span>
+      <div className="flex-1 h-px bg-gray-800" />
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gray-950 text-white">
       {/* Header */}
@@ -416,7 +450,6 @@ export default function DashboardPublicoPage() {
           <div className="flex items-center gap-3">
             {jogadorLogado ? (
               <>
-                {/* Avatar — abre modal de perfil */}
                 <button
                   onClick={() => setModalPerfil(true)}
                   className="flex items-center gap-2 bg-green-500/10 border border-green-500/30 text-green-400 text-xs font-semibold px-3 py-1.5 rounded-xl hover:bg-green-500/20 transition-colors"
@@ -436,7 +469,6 @@ export default function DashboardPublicoPage() {
                   </div>
                   {jogadorLogado.nome.split(" ")[0]}
                 </button>
-                {/* Botão sair */}
                 <button
                   onClick={handleSair}
                   disabled={saindo}
@@ -470,24 +502,10 @@ export default function DashboardPublicoPage() {
           </div>
         )}
 
-        {jogadorLogado && (
-          <div className="text-center">
-            <Link
-              href={`/racha/${codigo}/avaliar`}
-              className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-yellow-500/20 transition-colors"
-            >
-              ⭐ Avaliar jogadores
-            </Link>
-          </div>
-        )}
-
         {/* Próximas partidas */}
         {partidasFuturas.length > 0 && (
           <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 flex flex-col gap-3">
-            <div className="flex items-center gap-2">
-              <span>📅</span>
-              <span className="text-white font-bold">Próximas partidas</span>
-            </div>
+            <TituloSecao emoji="📅" titulo="Próximas partidas" />
             {partidasFuturas.map((partida) => {
               const presenca = presencaAtual(partida.id);
               const total = totalConfirmados(partida.id);
@@ -526,7 +544,6 @@ export default function DashboardPublicoPage() {
                       </p>
                     </div>
                   </button>
-
                   {jogadorLogado && (
                     <div className="flex gap-2">
                       {bloqueado ? (
@@ -582,7 +599,6 @@ export default function DashboardPublicoPage() {
                       )}
                     </div>
                   )}
-
                   {!jogadorLogado && (
                     <Link
                       href="/login"
@@ -600,10 +616,7 @@ export default function DashboardPublicoPage() {
         {/* Escalação */}
         {escalacao && (
           <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2">
-              <span>🏟️</span>
-              <span className="text-white font-bold">Escalação</span>
-            </div>
+            <TituloSecao emoji="🏟️" titulo="Escalação" />
             <CampoEscalacao
               escalacao={escalacao}
               jogadores={jogadoresPublico}
@@ -772,17 +785,7 @@ export default function DashboardPublicoPage() {
         {ultimaPartida && (
           <Link href={`/racha/${codigo}/partidas`}>
             <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 hover:border-gray-700 transition-colors cursor-pointer">
-              <div className="flex items-center gap-2 mb-3">
-                <span>⚽</span>
-                <span className="text-gray-400 font-bold text-sm">
-                  Última Partida
-                </span>
-                <span className="ml-auto text-gray-600 text-xs">
-                  {new Date(
-                    ultimaPartida.data + "T12:00:00",
-                  ).toLocaleDateString("pt-BR")}
-                </span>
-              </div>
+              <TituloSecao emoji="⚽" titulo="Última Partida" />
               <div className="flex items-center justify-center gap-4">
                 <span className="text-white font-bold flex-1 text-right truncate">
                   {ultimaPartida.time_a}
@@ -806,23 +809,17 @@ export default function DashboardPublicoPage() {
         {/* Artilheiros */}
         <Link href={`/racha/${codigo}/artilheiros`}>
           <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 hover:border-gray-700 transition-colors cursor-pointer">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span>🥇</span>
-                <span className="text-white font-bold">Artilheiros</span>
-              </div>
-              <span className="text-gray-500 text-xs">ver todos →</span>
-            </div>
+            <TituloSecao emoji="🥇" titulo="Artilheiros" />
             {artilheiros.length === 0 ? (
               <p className="text-gray-600 text-sm text-center py-2">
                 Nenhum gol registrado
               </p>
             ) : (
               <div className="flex flex-col gap-2">
-                {artilheiros.slice(0, 5).map((s, i) => (
+                {artilheiros.map((s, i) => (
                   <div key={s.id} className="flex items-center gap-3">
                     <span
-                      className={`text-sm w-5 font-bold ${i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-400" : i === 2 ? "text-orange-400" : "text-gray-600"}`}
+                      className={`text-sm w-5 font-bold ${i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-400" : "text-orange-400"}`}
                     >
                       {i + 1}
                     </span>
@@ -852,6 +849,9 @@ export default function DashboardPublicoPage() {
                     </span>
                   </div>
                 ))}
+                <p className="text-gray-600 text-xs text-center mt-1">
+                  ver todos →
+                </p>
               </div>
             )}
           </div>
@@ -860,23 +860,17 @@ export default function DashboardPublicoPage() {
         {/* Assistências */}
         <Link href={`/racha/${codigo}/assistencias`}>
           <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 hover:border-gray-700 transition-colors cursor-pointer">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span>🎯</span>
-                <span className="text-white font-bold">Assistências</span>
-              </div>
-              <span className="text-gray-500 text-xs">ver todos →</span>
-            </div>
+            <TituloSecao emoji="🎯" titulo="Assistências" />
             {assistentes.length === 0 ? (
               <p className="text-gray-600 text-sm text-center py-2">
                 Nenhuma assistência registrada
               </p>
             ) : (
               <div className="flex flex-col gap-2">
-                {assistentes.slice(0, 5).map((s, i) => (
+                {assistentes.map((s, i) => (
                   <div key={s.id} className="flex items-center gap-3">
                     <span
-                      className={`text-sm w-5 font-bold ${i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-400" : i === 2 ? "text-orange-400" : "text-gray-600"}`}
+                      className={`text-sm w-5 font-bold ${i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-400" : "text-orange-400"}`}
                     >
                       {i + 1}
                     </span>
@@ -906,6 +900,58 @@ export default function DashboardPublicoPage() {
                     </span>
                   </div>
                 ))}
+                <p className="text-gray-600 text-xs text-center mt-1">
+                  ver todos →
+                </p>
+              </div>
+            )}
+          </div>
+        </Link>
+
+        {/* Avaliações — top 3 */}
+        <Link href={`/racha/${codigo}/avaliar`}>
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 hover:border-gray-700 transition-colors cursor-pointer">
+            <TituloSecao emoji="⭐" titulo="Melhores avaliados" />
+            {rankingNivel.length === 0 ? (
+              <p className="text-gray-600 text-sm text-center py-2">
+                Nenhuma avaliação registrada
+              </p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {rankingNivel.slice(0, 3).map((j, i) => (
+                  <div key={j.id} className="flex items-center gap-3">
+                    <span
+                      className={`text-sm w-5 font-bold ${i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-400" : "text-orange-400"}`}
+                    >
+                      {i + 1}
+                    </span>
+                    <div className="w-7 h-7 rounded-full bg-gray-800 overflow-hidden flex-shrink-0">
+                      {j.foto_url ? (
+                        <img
+                          src={j.foto_url}
+                          alt=""
+                          style={{
+                            width: 28,
+                            height: 28,
+                            objectFit: "cover",
+                            display: "block",
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-xs">
+                          👤
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-white text-sm flex-1">{j.nome}</span>
+                    <span className="text-yellow-400 font-bold text-sm">
+                      ⭐ {j.nivel_medio}
+                    </span>
+                  </div>
+                ))}
+                <p className="text-gray-600 text-xs text-center mt-1">
+                  avaliar jogadores →
+                </p>
               </div>
             )}
           </div>
@@ -914,23 +960,17 @@ export default function DashboardPublicoPage() {
         {/* Jogos disputados */}
         <Link href={`/racha/${codigo}/jogos`}>
           <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 hover:border-gray-700 transition-colors cursor-pointer">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span>🏟️</span>
-                <span className="text-white font-bold">Jogos disputados</span>
-              </div>
-              <span className="text-gray-500 text-xs">ver todos →</span>
-            </div>
+            <TituloSecao emoji="🏟️" titulo="Jogos disputados" />
             {rankingJogos.length === 0 ? (
               <p className="text-gray-600 text-sm text-center py-2">
                 Nenhum jogo registrado
               </p>
             ) : (
               <div className="flex flex-col gap-2">
-                {rankingJogos.slice(0, 5).map((j, i) => (
+                {rankingJogos.slice(0, 3).map((j, i) => (
                   <div key={j.id} className="flex items-center gap-3">
                     <span
-                      className={`text-sm w-5 font-bold ${i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-400" : i === 2 ? "text-orange-400" : "text-gray-600"}`}
+                      className={`text-sm w-5 font-bold ${i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-400" : "text-orange-400"}`}
                     >
                       {i + 1}
                     </span>
@@ -958,6 +998,9 @@ export default function DashboardPublicoPage() {
                     </span>
                   </div>
                 ))}
+                <p className="text-gray-600 text-xs text-center mt-1">
+                  ver todos →
+                </p>
               </div>
             )}
           </div>
@@ -966,23 +1009,17 @@ export default function DashboardPublicoPage() {
         {/* Cartões */}
         <Link href={`/racha/${codigo}/cartoes`}>
           <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 hover:border-gray-700 transition-colors cursor-pointer">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span>🟨</span>
-                <span className="text-white font-bold">Cartões</span>
-              </div>
-              <span className="text-gray-500 text-xs">ver todos →</span>
-            </div>
+            <TituloSecao emoji="🟨" titulo="Cartões" />
             {cartoes.length === 0 ? (
               <p className="text-gray-600 text-sm text-center py-2">
                 Nenhum cartão registrado
               </p>
             ) : (
               <div className="flex flex-col gap-2">
-                {cartoes.slice(0, 5).map((s, i) => (
+                {cartoes.map((s, i) => (
                   <div key={s.id} className="flex items-center gap-3">
                     <span
-                      className={`text-sm w-5 font-bold ${i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-400" : i === 2 ? "text-orange-400" : "text-gray-600"}`}
+                      className={`text-sm w-5 font-bold ${i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-400" : "text-orange-400"}`}
                     >
                       {i + 1}
                     </span>
@@ -1017,6 +1054,9 @@ export default function DashboardPublicoPage() {
                     </div>
                   </div>
                 ))}
+                <p className="text-gray-600 text-xs text-center mt-1">
+                  ver todos →
+                </p>
               </div>
             )}
           </div>
@@ -1026,13 +1066,7 @@ export default function DashboardPublicoPage() {
         {jogadoresFinanceiro.length > 0 && (
           <Link href={`/racha/${codigo}/financeiro`}>
             <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 hover:border-gray-700 transition-colors cursor-pointer">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span>💰</span>
-                  <span className="text-white font-bold">Mensalidades</span>
-                </div>
-                <span className="text-gray-500 text-xs">ver todos →</span>
-              </div>
+              <TituloSecao emoji="💰" titulo="Mensalidades" />
               {(() => {
                 const meses = getMesesRecentes(3);
                 const devedores = [...jogadoresFinanceiro]
@@ -1042,7 +1076,7 @@ export default function DashboardPublicoPage() {
                   }))
                   .filter((x) => x.atraso > 0)
                   .sort((a, b) => b.atraso - a.atraso)
-                  .slice(0, 5);
+                  .slice(0, 3);
                 if (devedores.length === 0)
                   return (
                     <p className="text-green-400 text-sm text-center py-2">
@@ -1080,6 +1114,9 @@ export default function DashboardPublicoPage() {
                         </span>
                       </div>
                     ))}
+                    <p className="text-gray-600 text-xs text-center mt-1">
+                      ver todos →
+                    </p>
                   </div>
                 );
               })()}
@@ -1113,7 +1150,7 @@ export default function DashboardPublicoPage() {
         </div>
       </main>
 
-      {/* Modal perfil do jogador */}
+      {/* Modal perfil do jogador logado */}
       {modalPerfil && jogadorLogado && (
         <div
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/70"
@@ -1123,7 +1160,6 @@ export default function DashboardPublicoPage() {
             className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-md p-6 flex flex-col gap-5"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
             <div className="flex items-center justify-between">
               <h2 className="text-white font-black">Meu perfil</h2>
               <button
@@ -1133,8 +1169,6 @@ export default function DashboardPublicoPage() {
                 ✕
               </button>
             </div>
-
-            {/* Foto + info + nível */}
             <div className="flex items-center gap-4">
               <div className="relative flex-shrink-0">
                 <div className="w-20 h-20 rounded-full bg-gray-800 overflow-hidden border-2 border-green-500/30">
@@ -1175,8 +1209,6 @@ export default function DashboardPublicoPage() {
                   )}
               </div>
             </div>
-
-            {/* Estatísticas */}
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-gray-800 rounded-xl p-3 text-center">
                 <p className="text-green-400 font-black text-2xl">
@@ -1207,15 +1239,13 @@ export default function DashboardPublicoPage() {
                 <p className="text-gray-500 text-xs mt-0.5">🟨 🟥 Cartões</p>
               </div>
             </div>
-
-            {/* Botões */}
             <div className="flex gap-3">
               <Link
                 href={`/racha/${codigo}/avaliar`}
                 onClick={() => setModalPerfil(false)}
                 className="flex-1 py-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm font-semibold text-center hover:bg-yellow-500/20 transition-colors"
               >
-                ⭐ Avaliar as lendas
+                ⭐ Avaliar jogadores
               </Link>
               <Link
                 href="/jogador/perfil"
@@ -1470,6 +1500,13 @@ export default function DashboardPublicoPage() {
           </div>
         </div>
       )}
+
+      {/* Modal jogador genérico */}
+      <ModalJogador
+        jogadorId={jogadorModalId}
+        rachaId={racha?.id ?? ""}
+        onClose={() => setJogadorModalId(null)}
+      />
     </div>
   );
 }
