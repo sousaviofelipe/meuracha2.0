@@ -63,6 +63,7 @@ export default function DashboardPage() {
   const [confirmados, setConfirmados] = useState(0);
   const [totalAtivos, setTotalAtivos] = useState(0);
   const [inadimplentes, setInadimplentes] = useState<Inadimplente[]>([]);
+  const [pagamentosAguardando, setPagamentosAguardando] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // Modal inadimplente
@@ -94,6 +95,7 @@ export default function DashboardPage() {
         { data: todasPartidas },
         todosPagamentos,
         vinculos,
+        { data: pagsAguardando },
       ] = await Promise.all([
         dbGetEstatisticas(r.id),
         dbGetNotificacaoAtiva(r.id),
@@ -121,6 +123,11 @@ export default function DashboardPage() {
           .eq("encerrada", true),
         dbGetTodosPagamentos(r.id),
         listarVinculosPendentes(r.id),
+        getSupabase()
+          .from("pagamentos")
+          .select("id")
+          .eq("racha_id", r.id)
+          .eq("status", "aguardando"),
       ]);
 
       setStats(s);
@@ -130,6 +137,7 @@ export default function DashboardPage() {
       setTotalJogadores((jogs ?? []).length);
       setTotalPartidas((todasPartidas ?? []).length);
       setVinculosPendentes(vinculos.length);
+      setPagamentosAguardando((pagsAguardando ?? []).length);
 
       // Calcular inadimplentes
       const lista: Inadimplente[] = [];
@@ -365,6 +373,24 @@ export default function DashboardPage() {
               </p>
               <p className="text-gray-500 text-xs">
                 Jogador{vinculosPendentes > 1 ? "es" : ""} aguardando aprovação
+              </p>
+            </div>
+            <span className="text-gray-500 text-sm">→</span>
+          </div>
+        </Link>
+      )}
+
+      {pagamentosAguardando > 0 && (
+        <Link href="/admin/financeiro">
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl px-4 py-3 flex items-center gap-3 hover:border-yellow-500/60 transition-colors cursor-pointer">
+            <span className="text-xl">💰</span>
+            <div className="flex-1">
+              <p className="text-yellow-400 font-bold text-sm">
+                {pagamentosAguardando} pagamento
+                {pagamentosAguardando > 1 ? "s" : ""} aguardando confirmação
+              </p>
+              <p className="text-gray-500 text-xs">
+                Jogadores avisaram que pagaram
               </p>
             </div>
             <span className="text-gray-500 text-sm">→</span>
