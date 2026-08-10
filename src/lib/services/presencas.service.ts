@@ -7,6 +7,7 @@ import {
   dbContarPresencas,
   dbPresencasDoJogador,
   dbToggleBloqueioJogador,
+  dbDeletarPresenca,
 } from "@/lib/db/presencas.db";
 import { Presenca } from "@/types";
 
@@ -109,4 +110,11 @@ export function agruparPresencas(
   );
 
   return { confirmados, ausencias, semResposta };
+}
+
+export async function deletarPresenca(
+  partida_id: string,
+  jogador_id: string,
+): Promise<void> {
+  return dbDeletarPresenca(partida_id, jogador_id);
 }

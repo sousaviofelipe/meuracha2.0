@@ -103,3 +103,15 @@ export async function dbToggleBloqueioJogador(
     .eq("id", jogador_id);
   if (error) throw new Error(error.message);
 }
+
+export async function dbDeletarPresenca(
+  partida_id: string,
+  jogador_id: string,
+): Promise<void> {
+  const { error } = await getSupabase()
+    .from("presencas")
+    .delete()
+    .eq("partida_id", partida_id)
+    .eq("jogador_id", jogador_id);
+  if (error) throw new Error(error.message);
+}

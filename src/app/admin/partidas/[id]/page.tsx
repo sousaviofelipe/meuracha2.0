@@ -19,6 +19,9 @@ import { Partida, Jogador, EventoPartida, TipoEvento, Presenca } from "@/types";
 import {
   listarPresencas,
   agruparPresencas,
+  confirmarPresenca,
+  cancelarPresenca,
+  deletarPresenca,
 } from "@/lib/services/presencas.service";
 const TIPO_CONFIG = {
   gol: {
@@ -109,6 +112,8 @@ export default function FichaTecnicaPage() {
   const [timeSelecionado, setTimeSelecionado] = useState<"A" | "B">("A");
   const [salvando, setSalvando] = useState(false);
   const [presencas, setPresencas] = useState<Presenca[]>([]);
+  const [jogadoresTodos, setJogadoresTodos] = useState<Jogador[]>([]);
+  const [salvandoPresenca, setSalvandoPresenca] = useState<string | null>(null);
   const [erro, setErro] = useState("");
   const [adicionarAssistencia, setAdicionarAssistencia] = useState(false);
 
@@ -145,6 +150,14 @@ export default function FichaTecnicaPage() {
       setEventos(e);
       const pres = await listarPresencas(partidaId);
       setPresencas(pres);
+
+      const { data: jogs } = await getSupabase()
+        .from("jogadores")
+        .select("*")
+        .eq("racha_id", p.racha_id)
+        .eq("ativo", true)
+        .order("nome");
+      setJogadoresTodos(jogs ?? []);
       setLoading(false);
     }
     carregar();
@@ -332,6 +345,41 @@ export default function FichaTecnicaPage() {
 
   const gruposEventos = agruparEventos(eventosOrdenados);
 
+  async function handleTogglePresencaAdmin(jogadorId: string) {
+    if (!partida || salvandoPresenca) return;
+    setSalvandoPresenca(jogadorId);
+    try {
+      const existe = presencas.find((p) => p.jogador_id === jogadorId);
+      if (existe?.confirmado) {
+        await deletarPresenca(partida.id, jogadorId);
+        setPresencas((prev) => prev.filter((p) => p.jogador_id !== jogadorId));
+      } else {
+        await confirmarPresenca(partida.id, jogadorId);
+        setPresencas((prev) => {
+          const existeP = prev.find((p) => p.jogador_id === jogadorId);
+          if (existeP)
+            return prev.map((p) =>
+              p.jogador_id === jogadorId
+                ? { ...p, confirmado: true, motivo: undefined }
+                : p,
+            );
+          return [
+            ...prev,
+            {
+              id: crypto.randomUUID(),
+              partida_id: partida.id,
+              jogador_id: jogadorId,
+              confirmado: true,
+              criado_em: new Date().toISOString(),
+            },
+          ];
+        });
+      }
+    } finally {
+      setSalvandoPresenca(null);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -442,7 +490,7 @@ export default function FichaTecnicaPage() {
       {(() => {
         const { confirmados, ausencias, semResposta } = agruparPresencas(
           presencas,
-          jogadores,
+          jogadoresTodos,
         );
         return (
           <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 flex flex-col gap-4">
@@ -460,11 +508,16 @@ export default function FichaTecnicaPage() {
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {confirmados.map((p) => {
-                    const jog = jogadores.find((j) => j.id === p.jogador_id);
+                    const jog = jogadoresTodos.find(
+                      (j) => j.id === p.jogador_id,
+                    );
                     return (
-                      <div
+                      <button
                         key={p.id}
-                        className="flex items-center gap-1.5 bg-green-500/10 border border-green-500/20 rounded-full px-2 py-1"
+                        onClick={() => handleTogglePresencaAdmin(p.jogador_id)}
+                        disabled={salvandoPresenca === p.jogador_id}
+                        title="Clique para remover confirmação"
+                        className="flex items-center gap-1.5 bg-green-500/10 border border-green-500/20 rounded-full px-2 py-1 hover:bg-red-500/10 hover:border-red-500/20 transition-colors disabled:opacity-50"
                       >
                         <div className="w-5 h-5 rounded-full bg-gray-700 overflow-hidden flex-shrink-0">
                           {jog?.foto_url ? (
@@ -482,7 +535,7 @@ export default function FichaTecnicaPage() {
                         <span className="text-green-400 text-xs font-medium">
                           {jog?.nome?.split(" ")[0] ?? "—"}
                         </span>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -497,7 +550,9 @@ export default function FichaTecnicaPage() {
                 </p>
                 <div className="flex flex-col gap-1.5">
                   {ausencias.map((p) => {
-                    const jog = jogadores.find((j) => j.id === p.jogador_id);
+                    const jog = jogadoresTodos.find(
+                      (j) => j.id === p.jogador_id,
+                    );
                     return (
                       <div key={p.id} className="flex items-center gap-2">
                         <div className="w-6 h-6 rounded-full bg-gray-700 overflow-hidden flex-shrink-0">
@@ -526,19 +581,18 @@ export default function FichaTecnicaPage() {
               </div>
             )}
 
-            {/* Sem resposta */}
-            {semResposta.length > 0 && (
-              <div>
-                <p className="text-gray-500 text-xs font-bold mb-2">
-                  ⏳ Sem resposta ({semResposta.length})
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {(semResposta as Jogador[]).map((jog) => (
-                    <div
-                      key={jog.id}
-                      className="flex items-center gap-1.5 bg-gray-800 rounded-full px-2 py-1"
-                    >
-                      <div className="w-5 h-5 rounded-full bg-gray-700 overflow-hidden flex-shrink-0">
+            {/* Sem resposta — com botão para confirmar manualmente */}
+            <div>
+              <p className="text-gray-500 text-xs font-bold mb-2">
+                ⏳ Sem resposta ({semResposta.length})
+              </p>
+              {semResposta.length === 0 ? (
+                <p className="text-gray-600 text-xs">Todos responderam!</p>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {semResposta.map((jog: Jogador) => (
+                    <div key={jog.id} className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-gray-700 overflow-hidden flex-shrink-0">
                         {jog.foto_url ? (
                           <img
                             src={jog.foto_url}
@@ -551,14 +605,21 @@ export default function FichaTecnicaPage() {
                           </div>
                         )}
                       </div>
-                      <span className="text-gray-400 text-xs">
-                        {jog.nome?.split(" ")[0]}
+                      <span className="text-gray-400 text-xs flex-1">
+                        {jog.nome}
                       </span>
+                      <button
+                        onClick={() => handleTogglePresencaAdmin(jog.id)}
+                        disabled={salvandoPresenca === jog.id}
+                        className="text-xs bg-green-500/10 border border-green-500/20 text-green-400 hover:bg-green-500/20 px-2 py-0.5 rounded-full transition-colors disabled:opacity-50 flex-shrink-0"
+                      >
+                        {salvandoPresenca === jog.id ? "..." : "+ Confirmar"}
+                      </button>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         );
       })()}
