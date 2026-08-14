@@ -414,71 +414,106 @@ export default function FichaTecnicaPage() {
           </span>
         )}
       </div>
+      ```tsx
+      {/* Placar + Cronômetro */}
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+        {/* Times + Placar */}
+        <div className="px-5 pt-6 pb-5">
+          <div className="flex items-center justify-between gap-4">
+            {/* Time A */}
+            <div className="flex-1 min-w-0 text-center">
+              <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center">
+                <span className="text-green-400 font-black text-sm">A</span>
+              </div>
+              <p className="text-white font-bold text-sm truncate">
+                {partida?.time_a}
+              </p>
+            </div>
 
-      {/* Placar */}
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-        <div className="flex flex-col items-center gap-2">
-          {/* Placar centralizado */}
-          <div className="bg-gray-800 px-8 py-3 rounded-2xl">
-            <span className="text-green-400 font-black text-4xl whitespace-nowrap">
-              {partida?.gols_time_a} x {partida?.gols_time_b}
-            </span>
-          </div>
-          {/* Nomes abaixo */}
-          <div className="flex items-center justify-between w-full px-1 mt-1">
-            <p className="text-gray-300 font-bold text-xs flex-1 text-left truncate">
-              {partida?.time_a}
-            </p>
-            <p className="text-gray-600 text-xs px-3">vs</p>
-            <p className="text-gray-300 font-bold text-xs flex-1 text-right truncate">
-              {partida?.time_b}
-            </p>
-          </div>
-        </div>
-      </div>
+            {/* Placar */}
+            <div className="flex-shrink-0 text-center">
+              <div className="flex items-center justify-center gap-3">
+                <span className="text-green-400 font-black text-5xl leading-none">
+                  {partida?.gols_time_a}
+                </span>
 
-      {/* Cronômetro */}
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span
-              className={`text-3xl font-black font-mono ${rodando ? "text-green-400" : "text-white"}`}
-            >
-              {formatarTempo(segundos)}
-            </span>
-            {rodando && (
-              <span className="flex items-center gap-1 text-green-400 text-xs">
-                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                ao vivo
+                <span className="text-gray-600 text-2xl font-bold">×</span>
+
+                <span className="text-orange-400 font-black text-5xl leading-none">
+                  {partida?.gols_time_b}
+                </span>
+              </div>
+
+              <span className="block text-gray-600 text-[10px] font-bold uppercase tracking-widest mt-2">
+                Placar
               </span>
-            )}
+            </div>
+
+            {/* Time B */}
+            <div className="flex-1 min-w-0 text-center">
+              <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+                <span className="text-orange-400 font-black text-sm">B</span>
+              </div>
+              <p className="text-white font-bold text-sm truncate">
+                {partida?.time_b}
+              </p>
+            </div>
           </div>
-          <div className="flex gap-2">
-            {!rodando ? (
-              <button
-                onClick={handleIniciar}
-                className="bg-green-500 hover:bg-green-400 text-black font-bold px-4 py-2 rounded-xl text-sm transition-colors"
+        </div>
+
+        {/* Cronômetro */}
+        <div className="border-t border-gray-800 bg-gray-950/40 px-5 py-4">
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span
+                className={`text-3xl font-black font-mono tracking-tight ${
+                  rodando ? "text-green-400" : "text-white"
+                }`}
               >
-                ▶ Iniciar
-              </button>
-            ) : (
+                {formatarTempo(segundos)}
+              </span>
+
+              {rodando ? (
+                <span className="flex items-center gap-1.5 text-green-400 text-[10px] font-bold uppercase tracking-wider">
+                  <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                  Ao vivo
+                </span>
+              ) : (
+                <span className="text-gray-600 text-[10px] font-bold uppercase tracking-wider">
+                  Parado
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 w-full max-w-xs">
+              {!rodando ? (
+                <button
+                  onClick={handleIniciar}
+                  className="flex-1 bg-green-500 hover:bg-green-400 text-black font-bold px-5 py-2.5 rounded-xl text-sm transition-colors"
+                >
+                  ▶ Iniciar partida
+                </button>
+              ) : (
+                <button
+                  onClick={handlePausar}
+                  className="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-bold px-5 py-2.5 rounded-xl text-sm transition-colors"
+                >
+                  ⏸ Pausar partida
+                </button>
+              )}
+
               <button
-                onClick={handlePausar}
-                className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold px-4 py-2 rounded-xl text-sm transition-colors"
+                onClick={handleResetar}
+                className="w-11 h-11 flex items-center justify-center bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white font-bold rounded-xl text-lg transition-colors"
+                title="Resetar cronômetro"
               >
-                ⏸ Pausar
+                ↺
               </button>
-            )}
-            <button
-              onClick={handleResetar}
-              className="bg-gray-800 hover:bg-gray-700 text-gray-400 font-bold px-4 py-2 rounded-xl text-sm transition-colors"
-            >
-              ↺
-            </button>
+            </div>
           </div>
         </div>
       </div>
-
+      ```
       {/* Botão adicionar evento */}
       <button
         onClick={abrirModal}
@@ -486,144 +521,6 @@ export default function FichaTecnicaPage() {
       >
         + Adicionar Evento
       </button>
-      {/* Presenças */}
-      {(() => {
-        const { confirmados, ausencias, semResposta } = agruparPresencas(
-          presencas,
-          jogadoresTodos,
-        );
-        return (
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 flex flex-col gap-4">
-            <h2 className="text-white font-bold text-sm">
-              👥 Confirmações de presença
-            </h2>
-
-            {/* Confirmados */}
-            <div>
-              <p className="text-green-400 text-xs font-bold mb-2">
-                ✅ Confirmados ({confirmados.length})
-              </p>
-              {confirmados.length === 0 ? (
-                <p className="text-gray-600 text-xs">Nenhum confirmado ainda</p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {confirmados.map((p) => {
-                    const jog = jogadoresTodos.find(
-                      (j) => j.id === p.jogador_id,
-                    );
-                    return (
-                      <button
-                        key={p.id}
-                        onClick={() => handleTogglePresencaAdmin(p.jogador_id)}
-                        disabled={salvandoPresenca === p.jogador_id}
-                        title="Clique para remover confirmação"
-                        className="flex items-center gap-1.5 bg-green-500/10 border border-green-500/20 rounded-full px-2 py-1 hover:bg-red-500/10 hover:border-red-500/20 transition-colors disabled:opacity-50"
-                      >
-                        <div className="w-5 h-5 rounded-full bg-gray-700 overflow-hidden flex-shrink-0">
-                          {jog?.foto_url ? (
-                            <img
-                              src={jog.foto_url}
-                              alt=""
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-[9px]">
-                              👤
-                            </div>
-                          )}
-                        </div>
-                        <span className="text-green-400 text-xs font-medium">
-                          {jog?.nome?.split(" ")[0] ?? "—"}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Ausências */}
-            {ausencias.length > 0 && (
-              <div>
-                <p className="text-red-400 text-xs font-bold mb-2">
-                  ❌ Ausências justificadas ({ausencias.length})
-                </p>
-                <div className="flex flex-col gap-1.5">
-                  {ausencias.map((p) => {
-                    const jog = jogadoresTodos.find(
-                      (j) => j.id === p.jogador_id,
-                    );
-                    return (
-                      <div key={p.id} className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-gray-700 overflow-hidden flex-shrink-0">
-                          {jog?.foto_url ? (
-                            <img
-                              src={jog.foto_url}
-                              alt=""
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-[9px]">
-                              👤
-                            </div>
-                          )}
-                        </div>
-                        <span className="text-white text-xs flex-1">
-                          {jog?.nome ?? "—"}
-                        </span>
-                        <span className="text-gray-500 text-xs bg-gray-800 px-2 py-0.5 rounded-full">
-                          {p.motivo}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Sem resposta — com botão para confirmar manualmente */}
-            <div>
-              <p className="text-gray-500 text-xs font-bold mb-2">
-                ⏳ Sem resposta ({semResposta.length})
-              </p>
-              {semResposta.length === 0 ? (
-                <p className="text-gray-600 text-xs">Todos responderam!</p>
-              ) : (
-                <div className="flex flex-col gap-1.5">
-                  {semResposta.map((jog: Jogador) => (
-                    <div key={jog.id} className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-gray-700 overflow-hidden flex-shrink-0">
-                        {jog.foto_url ? (
-                          <img
-                            src={jog.foto_url}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[9px]">
-                            👤
-                          </div>
-                        )}
-                      </div>
-                      <span className="text-gray-400 text-xs flex-1">
-                        {jog.nome}
-                      </span>
-                      <button
-                        onClick={() => handleTogglePresencaAdmin(jog.id)}
-                        disabled={salvandoPresenca === jog.id}
-                        className="text-xs bg-green-500/10 border border-green-500/20 text-green-400 hover:bg-green-500/20 px-2 py-0.5 rounded-full transition-colors disabled:opacity-50 flex-shrink-0"
-                      >
-                        {salvandoPresenca === jog.id ? "..." : "+ Confirmar"}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      })()}
-
       {/* Linha do tempo */}
       <div className="flex flex-col gap-1"></div>
       {/* Linha do tempo */}
@@ -795,7 +692,143 @@ export default function FichaTecnicaPage() {
           </div>
         )}
       </div>
+      {/* Presenças */}
+      {(() => {
+        const { confirmados, ausencias, semResposta } = agruparPresencas(
+          presencas,
+          jogadoresTodos,
+        );
+        return (
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 flex flex-col gap-4">
+            <h2 className="text-white font-bold text-sm">
+              👥 Confirmações de presença
+            </h2>
 
+            {/* Confirmados */}
+            <div>
+              <p className="text-green-400 text-xs font-bold mb-2">
+                ✅ Confirmados ({confirmados.length})
+              </p>
+              {confirmados.length === 0 ? (
+                <p className="text-gray-600 text-xs">Nenhum confirmado ainda</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {confirmados.map((p) => {
+                    const jog = jogadoresTodos.find(
+                      (j) => j.id === p.jogador_id,
+                    );
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => handleTogglePresencaAdmin(p.jogador_id)}
+                        disabled={salvandoPresenca === p.jogador_id}
+                        title="Clique para remover confirmação"
+                        className="flex items-center gap-1.5 bg-green-500/10 border border-green-500/20 rounded-full px-2 py-1 hover:bg-red-500/10 hover:border-red-500/20 transition-colors disabled:opacity-50"
+                      >
+                        <div className="w-5 h-5 rounded-full bg-gray-700 overflow-hidden flex-shrink-0">
+                          {jog?.foto_url ? (
+                            <img
+                              src={jog.foto_url}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[9px]">
+                              👤
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-green-400 text-xs font-medium">
+                          {jog?.nome?.split(" ")[0] ?? "—"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Ausências */}
+            {ausencias.length > 0 && (
+              <div>
+                <p className="text-red-400 text-xs font-bold mb-2">
+                  ❌ Ausências justificadas ({ausencias.length})
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  {ausencias.map((p) => {
+                    const jog = jogadoresTodos.find(
+                      (j) => j.id === p.jogador_id,
+                    );
+                    return (
+                      <div key={p.id} className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-gray-700 overflow-hidden flex-shrink-0">
+                          {jog?.foto_url ? (
+                            <img
+                              src={jog.foto_url}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[9px]">
+                              👤
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-white text-xs flex-1">
+                          {jog?.nome ?? "—"}
+                        </span>
+                        <span className="text-gray-500 text-xs bg-gray-800 px-2 py-0.5 rounded-full">
+                          {p.motivo}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Sem resposta — com botão para confirmar manualmente */}
+            <div>
+              <p className="text-gray-500 text-xs font-bold mb-2">
+                ⏳ Sem resposta ({semResposta.length})
+              </p>
+              {semResposta.length === 0 ? (
+                <p className="text-gray-600 text-xs">Todos responderam!</p>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {semResposta.map((jog: Jogador) => (
+                    <div key={jog.id} className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-gray-700 overflow-hidden flex-shrink-0">
+                        {jog.foto_url ? (
+                          <img
+                            src={jog.foto_url}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-[9px]">
+                            👤
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-gray-400 text-xs flex-1">
+                        {jog.nome}
+                      </span>
+                      <button
+                        onClick={() => handleTogglePresencaAdmin(jog.id)}
+                        disabled={salvandoPresenca === jog.id}
+                        className="text-xs bg-green-500/10 border border-green-500/20 text-green-400 hover:bg-green-500/20 px-2 py-0.5 rounded-full transition-colors disabled:opacity-50 flex-shrink-0"
+                      >
+                        {salvandoPresenca === jog.id ? "..." : "+ Confirmar"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
       {/* Modal Evento */}
       {modalEvento && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70">
