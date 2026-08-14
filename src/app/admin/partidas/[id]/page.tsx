@@ -414,7 +414,6 @@ export default function FichaTecnicaPage() {
           </span>
         )}
       </div>
-      ```tsx
       {/* Placar + Cronômetro */}
       <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
         {/* Times + Placar */}
@@ -513,7 +512,6 @@ export default function FichaTecnicaPage() {
           </div>
         </div>
       </div>
-      ```
       {/* Botão adicionar evento */}
       <button
         onClick={abrirModal}
