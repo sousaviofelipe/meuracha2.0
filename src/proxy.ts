@@ -48,9 +48,22 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // Login — redireciona se já logado
+  // Login — redireciona se já logado apenas se for admin
   if (isLoginPage && user) {
-    return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+    // Verifica se é admin
+    const { data: rachaAdmin } = await supabase
+      .from("rachas")
+      .select("id")
+      .eq("admin_id", user.id)
+      .maybeSingle();
+
+    if (rachaAdmin) {
+      // É admin — vai para o dashboard admin
+      return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+    } else {
+      // É jogador — vai para o perfil do jogador
+      return NextResponse.redirect(new URL("/jogador/perfil", request.url));
+    }
   }
 
   return supabaseResponse;
