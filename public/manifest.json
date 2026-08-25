@@ -2,7 +2,7 @@
   "id": "/login",
   "name": "Meu Racha",
   "short_name": "Meu Racha",
-  "description": "Gerencie seu racha com facilidade",
+  "description": "Gerencie seu racha com facilidade 2",
   "start_url": "/login",
   "display": "standalone",
   "background_color": "#030712",
